@@ -1,0 +1,350 @@
+{
+  "final": [
+    {
+      "number": 1,
+      "side": "Customer",
+      "question": "How much revenue comes from repeat customers, and what experience factors distinguish repeat buyers from one-time buyers?",
+      "purpose": "Combines retention, revenue and customer experience to identify what may drive repeat purchasing.",
+      "charts": "KPI + 100% stacked bar + driver heatmap",
+      "variables": "is_repeat; lifetime_order_value; order_value; review_score; review_sentiment; delivery_estimate_mismatch; delivery_time; freight_per_distance"
+    },
+    {
+      "number": 2,
+      "side": "Customer",
+      "question": "At what delivery delay does customer satisfaction drop sharply, and does the tipping point differ by category or customer state?",
+      "purpose": "Identifies an actionable delivery-delay threshold rather than reporting only average delivery time.",
+      "charts": "Binned line chart + heatmap",
+      "variables": "delivery_estimate_mismatch; review_score; product_category_name_english; customer_state"
+    },
+    {
+      "number": 3,
+      "side": "Marketplace / logistics",
+      "question": "Where is customer demand strong but seller supply thin, and which category \u00d7 state combinations should the marketplace prioritize for growth?",
+      "purpose": "Finds geographic and category-level whitespace where demand exists but seller presence is limited.",
+      "charts": "Demand-supply heatmap + bubble chart",
+      "variables": "product_category_name_english; customer_state; seller_state; seller_id; order_id; order_value"
+    },
+    {
+      "number": 4,
+      "side": "Marketplace / logistics",
+      "question": "How do delivery distance, freight burden and delivery performance trade off, and where are customers paying high freight without receiving better service?",
+      "purpose": "Identifies potentially inefficient delivery lanes and freight-service mismatches.",
+      "charts": "Scatter plot + trend line + bubble size",
+      "variables": "distance; freight_per_distance; freight_value; delivery_time; delivery_estimate_mismatch; review_score"
+    },
+    {
+      "number": 5,
+      "side": "Marketplace",
+      "question": "Which categories generate high revenue but disproportionately poor customer satisfaction, and how much marketplace revenue is exposed?",
+      "purpose": "Prioritizes CX fixes by economic impact rather than simply choosing the lowest-rated categories.",
+      "charts": "Revenue vs satisfaction quadrant + bubble chart",
+      "variables": "product_category_name_english; order_value; review_score; review_sentiment; seller_revenue; seller_revenue_share; order_id"
+    },
+    {
+      "number": 6,
+      "side": "Seller",
+      "question": "How dependent is marketplace revenue on a small group of sellers, and which categories are most exposed if top sellers underperform or leave?",
+      "purpose": "Assesses seller concentration and marketplace resilience at both overall and category level.",
+      "charts": "Pareto chart + category concentration heatmap",
+      "variables": "seller_revenue; seller_revenue_share; seller_revenue_bucket; category_concentration; category_dependency; product_category_name_english"
+    },
+    {
+      "number": 7,
+      "side": "Marketing \u2192 Seller",
+      "question": "Which marketing lead sources generate the highest conversion from marketing-qualified lead to closed seller?",
+      "purpose": "Measures whether the marketing funnel is actually producing sellers, not just leads.",
+      "charts": "Funnel + horizontal bar chart",
+      "variables": "MQL: mql_id; origin; first_contact_date | Closed deals: mql_id; seller_id; won_date"
+    },
+    {
+      "number": 8,
+      "side": "Marketing \u2192 Seller",
+      "question": "Do different marketing channels bring commercially stronger sellers, not just more sellers?",
+      "purpose": "Compares seller quality after acquisition using business scale and seller-potential indicators.",
+      "charts": "Box plot / distribution + quadrant chart",
+      "variables": "origin; seller_id; declared_monthly_revenue; declared_product_catalog_size; average_stock; business_segment; business_type; lead_type"
+    },
+    {
+      "number": 9,
+      "side": "Marketing \u2192 Seller \u2192 Marketplace",
+      "question": "Does faster lead conversion translate into stronger seller performance and better customer experience after sellers join the marketplace?",
+      "purpose": "Joins marketing and closed-deal data to ecommerce outcomes to test whether acquisition speed predicts downstream value.",
+      "charts": "Cohort line + scatter plot",
+      "variables": "first_contact_date; won_date; seller_id | order_purchase_timestamp; order_value; review_score; review_sentiment; delivery_estimate_mismatch"
+    },
+    {
+      "number": 10,
+      "side": "Customer / Marketplace",
+      "question": "Do high-value orders receive better or worse service, and where is the experience gap largest across categories?",
+      "purpose": "Connects customer value with operational performance to identify whether important orders receive an appropriate experience.",
+      "charts": "Box plot / distribution + quadrant chart",
+      "variables": "order_value; review_score; delivery_estimate_mismatch; delivery_time; payment_installments; product_category_name_english"
+    }
+  ],
+  "detailed": [
+    {
+      "number": 1,
+      "question": "Which sellers generate the highest volume of late deliveries, rather than simply having the worst late-delivery rate?",
+      "purpose": "Identify sellers creating the most late orders in absolute terms, while separating high volume from high late-rate sellers.",
+      "charts": "Sorted horizontal bar chart; optionally scatter plot of order volume vs late orders",
+      "variables": "seller_id; order_id; order_purchase_timestamp; order_delivered_customer_date; order_estimated_delivery_date; derived late_flag; late_order_count; total_orders; late_rate",
+      "filters": "Year; seller state; customer state; category; minimum seller order volume; delivery delay bucket; order status"
+    },
+    {
+      "number": 2,
+      "question": "Are one-star reviews concentrated among a small number of sellers, categories, or customer regions?",
+      "purpose": "Measure where 1-star experiences are concentrated and whether a small set of sellers/categories/regions accounts for most of them.",
+      "charts": "Pareto chart; ranked bar chart; treemap",
+      "variables": "review_score; seller_id; product_category_name_english; customer_state; order_id; derived one_star_flag; one_star_count; one_star_share",
+      "filters": "Year; seller state; customer state; category; minimum review count; delivery delay bucket"
+    },
+    {
+      "number": 3,
+      "question": "Which customer\u2013seller state combinations have the longest delivery times and poorest satisfaction?",
+      "purpose": "Find origin-destination state pairs with both slow delivery and low review scores.",
+      "charts": "Heatmap with delivery days or average review score; bubble matrix",
+      "variables": "customer_state; seller_state; order_purchase_timestamp; order_delivered_customer_date; review_score; derived delivery_days; average_review_score; order_count",
+      "filters": "Year; category; minimum order count; delivered orders only; late/on-time/early filter"
+    },
+    {
+      "number": 4,
+      "question": "Does paying more freight lead to better delivery performance, or do customers sometimes pay more and still receive poor service?",
+      "purpose": "Test whether freight cost is associated with delivery speed and satisfaction, including expensive shipments that still arrive late or receive poor reviews.",
+      "charts": "Scatter plot with trendline; box plots by freight-cost quartile",
+      "variables": "freight_value; price; order_id; order_purchase_timestamp; order_delivered_customer_date; order_estimated_delivery_date; review_score; derived freight_per_item; freight_pct_of_item_price; delivery_days; late_flag",
+      "filters": "Year; category; seller state; customer state; freight-cost percentile; late flag; review-score range; minimum order count"
+    },
+    {
+      "number": 5,
+      "question": "Which product categories have the greatest gap between product price and freight cost?",
+      "purpose": "Compare product price with shipping cost to identify categories where freight is unusually large relative to item value.",
+      "charts": "Ranked bar chart; box plot",
+      "variables": "product_category_name_english; price; freight_value; derived freight_to_price_ratio; freight_minus_price; average_price; average_freight",
+      "filters": "Year; state; seller; order value band; exclude extreme freight/price outliers"
+    },
+    {
+      "number": 6,
+      "question": "Do heavier or larger products have disproportionately higher freight costs or delivery delays?",
+      "purpose": "Assess whether physical product characteristics explain nonlinear increases in freight cost or delivery time.",
+      "charts": "Scatter plots with trendlines; size-bucket box plots",
+      "variables": "product_weight_g; product_length_cm; product_height_cm; product_width_cm; freight_value; delivery_days; derived product_volume_cm3; dimensional_weight_proxy; late_flag",
+      "filters": "Category; year; seller state; customer state; weight bucket; volume bucket; delivered orders only"
+    },
+    {
+      "number": 7,
+      "question": "Are certain product categories more vulnerable to poor delivery performance because of their physical size or weight?",
+      "purpose": "Separate category effects from physical-product effects to identify categories whose logistics problems may be structural.",
+      "charts": "Bubble chart; category heatmap",
+      "variables": "product_category_name_english; product_weight_g; product_length_cm; product_height_cm; product_width_cm; freight_value; delivery_days; late_flag; review_score; derived volume; weight/volume buckets",
+      "filters": "Year; seller state; customer state; category; minimum order count; late flag"
+    },
+    {
+      "number": 8,
+      "question": "Does seller handling time predict whether an order will eventually be delivered late?",
+      "purpose": "Test whether the time from approval to carrier handoff is a leading indicator of late delivery.",
+      "charts": "Box plot by late flag; scatter plot of handling days vs late rate",
+      "variables": "order_approved_at; order_delivered_carrier_date; order_estimated_delivery_date; order_purchase_timestamp; seller_id; derived seller_handling_days; late_flag; delivery_delay_days",
+      "filters": "Year; seller; category; customer state; handling-time bucket; order status"
+    },
+    {
+      "number": 9,
+      "question": "At which stage of the order journey does the largest delay occur: approval, seller handling, carrier handoff, or final delivery?",
+      "purpose": "Decompose total fulfillment time into purchase-to-approval, approval-to-carrier, carrier-to-customer, and purchase-to-delivery stages.",
+      "charts": "Stacked bar chart of average stage duration; box plots by stage",
+      "variables": "order_purchase_timestamp; order_approved_at; order_delivered_carrier_date; order_delivered_customer_date; derived approval_delay_days; seller_handling_days; carrier_transit_days; total_delivery_days",
+      "filters": "Year; state pair; category; seller; late flag; delivered orders only"
+    },
+    {
+      "number": 10,
+      "question": "Do high-value orders receive better delivery performance and customer satisfaction than low-value orders?",
+      "purpose": "Compare delivery outcomes and ratings across order-value bands.",
+      "charts": "Box plots; clustered column chart",
+      "variables": "order_id; price; freight_value; payment_value; review_score; delivery_days; late_flag; derived order_item_value; order_total_value; order_value_band",
+      "filters": "Year; category; customer state; seller state; value band; payment type; installments"
+    },
+    {
+      "number": 11,
+      "question": "Which categories generate high revenue but also a disproportionately high number of dissatisfied customers?",
+      "purpose": "Find economically important categories with both high sales and an unusually high share/count of low ratings.",
+      "charts": "Revenue vs dissatisfaction scatter/bubble chart; quadrant chart",
+      "variables": "product_category_name_english; price; freight_value; payment_value; review_score; order_id; derived revenue; low_rating_flag; low_rating_rate; order_count",
+      "filters": "Year; state; rating threshold; category; minimum revenue/order count"
+    },
+    {
+      "number": 12,
+      "question": "Are highly reviewed product categories actually driving significant marketplace revenue, or are the most visible satisfaction patterns economically small?",
+      "purpose": "Compare review volume and satisfaction visibility with actual category revenue and order volume.",
+      "charts": "Scatter plot: review count vs revenue; bubble size = orders",
+      "variables": "product_category_name_english; review_id; review_score; price; payment_value; order_id; derived review_count; average_review; revenue; order_count",
+      "filters": "Year; state; rating threshold; minimum review count; category"
+    },
+    {
+      "number": 13,
+      "question": "Which sellers have high order volume but declining customer experience, making them a hidden marketplace risk?",
+      "purpose": "Identify high-volume sellers whose review scores or late-delivery rates worsen over time.",
+      "charts": "Time-series line chart; seller risk quadrant",
+      "variables": "seller_id; order_purchase_timestamp; review_score; order_id; late_flag; derived monthly_order_count; monthly_avg_review; monthly_late_rate; seller_first_order_date",
+      "filters": "Year/month; seller; minimum monthly orders; category; customer state"
+    },
+    {
+      "number": 14,
+      "question": "How does customer satisfaction vary between orders delivered early, on time, and late?",
+      "purpose": "Directly compare review scores across delivery-performance groups.",
+      "charts": "100% stacked bar chart of rating distribution; box plot",
+      "variables": "review_score; order_delivered_customer_date; order_estimated_delivery_date; derived delivery_status (early/on-time/late); delivery_delay_days",
+      "filters": "Year; category; seller state; customer state; rating; delay bucket"
+    },
+    {
+      "number": 15,
+      "question": "Do installment payments change by product category, and which categories depend most heavily on installment purchasing?",
+      "purpose": "Measure installment usage and installment counts by category to identify categories with stronger financing dependence.",
+      "charts": "Stacked/clustered bar chart; heatmap",
+      "variables": "payment_type; payment_installments; payment_value; order_id; product_category_name_english; derived installment_flag; installment_share; average_installments",
+      "filters": "Year; category; customer state; order value band; payment type; installment-count bucket"
+    },
+    {
+      "number": 16,
+      "question": "Which states are primarily buyers, which are primarily sellers, and where is the marketplace geographically dependent on a small number of supply regions?",
+      "purpose": "Map buyer and seller activity by state and quantify supply concentration.",
+      "charts": "Filled map if supported; ranked bar charts; concentration curve",
+      "variables": "customer_state; seller_state; order_id; seller_id; derived buyer_order_count; seller_order_count; seller_share_by_state; HHI or top-state share",
+      "filters": "Year; category; order status; minimum order count; buyer/seller role"
+    },
+    {
+      "number": 17,
+      "question": "How concentrated is seller supply within each product category\u2014are some categories dependent on only a few sellers?",
+      "purpose": "Measure how much category order/revenue volume is controlled by the largest sellers.",
+      "charts": "Pareto chart; category-seller heatmap; HHI bar chart",
+      "variables": "product_category_name_english; seller_id; order_id; price; payment_value; derived seller_order_share; seller_revenue_share; seller_count; HHI",
+      "filters": "Year; category; state; top-N sellers; minimum category volume"
+    },
+    {
+      "number": 18,
+      "question": "Which categories have strong demand across many states but limited seller supply?",
+      "purpose": "Identify categories with broad geographic demand but relatively few active sellers.",
+      "charts": "Bubble chart: states served/demand vs seller count; ranked table",
+      "variables": "product_category_name_english; customer_state; seller_id; order_id; derived unique_customer_states; unique_sellers; orders; demand_per_seller",
+      "filters": "Year; category; minimum orders; minimum states; buyer state"
+    },
+    {
+      "number": 19,
+      "question": "Where is the mismatch between customer demand and seller location greatest?",
+      "purpose": "Compare buyer-state demand with seller-state supply to identify geographically underserved demand.",
+      "charts": "Origin-destination matrix heatmap; flow map",
+      "variables": "customer_state; seller_state; order_id; seller_id; derived order_volume_by_pair; buyer_demand_share; seller_supply_share; demand_supply_gap",
+      "filters": "Year; category; minimum order count; late flag; freight-cost band"
+    },
+    {
+      "number": 20,
+      "question": "Which product characteristics\u2014weight, size, photo count, or description length\u2014are associated with higher prices or stronger customer satisfaction?",
+      "purpose": "Test associations between listing/product attributes and price or review score.",
+      "charts": "Correlation heatmap; scatter plots; box plots by attribute bucket",
+      "variables": "product_weight_g; product_length_cm; product_height_cm; product_width_cm; product_photos_qty; product_name_lenght; product_description_lenght; price; review_score; derived volume; aspect/size buckets",
+      "filters": "Category; year; rating; price band; seller state; customer state"
+    },
+    {
+      "number": 21,
+      "question": "Do products with richer listings (more photos and longer descriptions) receive better reviews?",
+      "purpose": "Test whether listing completeness is associated with customer satisfaction.",
+      "charts": "Box plot by listing-richness bucket; scatter plot with review score",
+      "variables": "product_photos_qty; product_description_lenght; product_name_lenght; review_score; product_id; derived listing_richness_score",
+      "filters": "Category; year; minimum review count; price band; seller state; customer state"
+    },
+    {
+      "number": 22,
+      "question": "Are poor reviews associated more strongly with operational problems (late delivery) or product/listing characteristics?",
+      "purpose": "Compare the explanatory power of late delivery against product attributes for low ratings.",
+      "charts": "Grouped bar chart; correlation matrix; logistic-regression coefficient plot if doing modeling",
+      "variables": "review_score; late_flag; delivery_delay_days; product_weight_g; dimensions; product_photos_qty; description length; price; freight_value; category; seller_id; derived low_rating_flag",
+      "filters": "Year; category; seller; customer state; late/on-time/early; rating threshold"
+    },
+    {
+      "number": 23,
+      "question": "Which combinations of category \u00d7 seller \u00d7 region create the largest number of unhappy customer experiences?",
+      "purpose": "Find operational/customer-experience hotspots at the intersection of product, seller, and geography.",
+      "charts": "Treemap; ranked stacked bar; heatmap",
+      "variables": "product_category_name_english; seller_id; seller_state; customer_state; review_score; order_id; late_flag; derived unhappy_flag; unhappy_order_count",
+      "filters": "Year; rating threshold; late flag; category; seller; minimum orders; state pair"
+    },
+    {
+      "number": 24,
+      "question": "What percentage of marketplace harm comes from the top 10% of problematic sellers or segments?",
+      "purpose": "Quantify whether poor experiences are concentrated among a small fraction of sellers/segments.",
+      "charts": "Lorenz curve; Pareto chart",
+      "variables": "seller_id; order_id; review_score; late_flag; delivery_delay_days; derived harm_score; unhappy_count; late_count; top_10pct_flag",
+      "filters": "Year; category; customer state; seller state; harm definition; minimum seller volume"
+    },
+    {
+      "number": 25,
+      "question": "What share of revenue comes from repeat customers versus one-time buyers, and what makes a customer come back?",
+      "purpose": "Measure revenue and satisfaction by customer repeat behavior and identify characteristics associated with repeat purchasing.",
+      "charts": "Stacked bar; cohort/time-series; repeat-vs-one-time scatter",
+      "variables": "customer_unique_id; customer_id; order_id; order_purchase_timestamp; price; freight_value; payment_value; review_score; derived customer_order_count; repeat_customer_flag; customer_revenue; days_between_orders",
+      "filters": "Year; category; customer state; payment type; order value band; rating; first-order cohort"
+    },
+    {
+      "number": 26,
+      "question": "Which product categories are underrepresented in which states, compared to how well they sell elsewhere, and where should the business focus on growth next?",
+      "purpose": "Identify category-state combinations with weaker penetration than the category's broader marketplace performance.",
+      "charts": "Category \u00d7 state heatmap; opportunity bubble chart",
+      "variables": "product_category_name_english; customer_state; order_id; payment_value; derived category_state_share; category_total_share; penetration_gap; orders_per_state",
+      "filters": "Year; category; state; minimum category volume; buyer state"
+    },
+    {
+      "number": 27,
+      "question": "Do orders paid in installments tend to be larger, and is that extra order value worth the added payment processing cost?",
+      "purpose": "Compare order value and installment usage; the dataset does not contain actual payment-processing cost, so cost-effectiveness requires an assumed fee model.",
+      "charts": "Box plot of order value by installment flag; scatter of installments vs value",
+      "variables": "payment_type; payment_installments; payment_value; order_id; price; derived order_value; installment_flag; installment_share",
+      "filters": "Year; category; customer state; order value band; installment count; payment type"
+    },
+    {
+      "number": 28,
+      "question": "How does the relationship between physical delivery distance and freight charged impact cart conversion and customer satisfaction? Are sellers/customers subsidizing freight, or is it a fair cost?",
+      "purpose": "Estimate geographic shipping distance and compare it with freight charged and reviews. Cart conversion cannot be measured because no cart/session/checkout-abandonment data is present.",
+      "charts": "Scatter plot: distance vs freight; scatter: freight burden vs rating; distance heatmap",
+      "variables": "customer_zip_code_prefix; seller_zip_code_prefix; geolocation_lat; geolocation_lng; freight_value; review_score; order_id; derived straight-line_distance_km; freight_per_km; freight_to_price_ratio",
+      "filters": "Year; category; state pair; distance bucket; freight bucket; rating; exclude missing geolocation"
+    },
+    {
+      "number": 29,
+      "question": "Whose voice is actually public?",
+      "purpose": "Measure how much of the marketplace's customer voice is represented by written reviews versus star-only reviews, and where written feedback is concentrated.",
+      "charts": "100% stacked bar; heatmap of written-review share",
+      "variables": "review_id; review_score; review_comment_title; review_comment_message; customer_state; seller_id; product_category_name_english; derived written_review_flag; comment_length; written_review_share",
+      "filters": "Year; category; customer state; seller state; rating; minimum review count"
+    },
+    {
+      "number": 30,
+      "question": "Is revenue concentrated enough that a category fix scales?",
+      "purpose": "Determine whether a small number of categories account for enough revenue that improving one could materially affect marketplace results.",
+      "charts": "Pareto chart; cumulative revenue curve",
+      "variables": "product_category_name_english; price; payment_value; order_id; derived category_revenue; revenue_share; cumulative_revenue_share",
+      "filters": "Year; state; category; top-N categories; order status"
+    },
+    {
+      "number": 31,
+      "question": "Does seller acquisition actually produce trading supply?",
+      "purpose": "Assess whether newly observed sellers go on to generate meaningful order volume. True acquisition-channel effectiveness cannot be measured because seller acquisition source/date is absent.",
+      "charts": "Seller cohort curve; histogram of time-to-first-meaningful-volume",
+      "variables": "seller_id; order_purchase_timestamp; order_id; price/payment_value; derived seller_first_order_date; months_since_first_order; cumulative_orders; meaningful_volume_threshold",
+      "filters": "Seller cohort month/year; seller state; category; threshold for meaningful volume"
+    },
+    {
+      "number": 32,
+      "question": "How much of total revenue depends on a small group of sellers, and what happens to the business if one of them leaves or underperforms?",
+      "purpose": "Measure seller revenue concentration and simulate revenue exposure to the loss or underperformance of major sellers.",
+      "charts": "Pareto chart; concentration curve; scenario bar chart",
+      "variables": "seller_id; payment_value; price; order_id; derived seller_revenue; revenue_share; cumulative_share; top-N revenue; scenario_revenue_loss",
+      "filters": "Year; category; seller state; top-N sellers; underperformance scenario (e.g. -25%/-50%/-100%)"
+    },
+    {
+      "number": 33,
+      "question": "How quickly do new sellers start selling in meaningful volume, and do sellers brought in through the marketing funnel grow faster than sellers who joined on their own?",
+      "purpose": "Measure time from first observed sale to meaningful volume. Marketing-funnel comparison is not possible without seller acquisition source/channel data.",
+      "charts": "Cohort line chart; box plot of time-to-threshold",
+      "variables": "seller_id; order_purchase_timestamp; order_id; price/payment_value; derived seller_first_order_date; days_to_meaningful_volume; cumulative_orders; meaningful_volume_threshold",
+      "filters": "Seller cohort; seller state; category; volume threshold; time window"
+    }
+  ]
+}
