@@ -5,6 +5,7 @@ import pandas as pd
 from analytics import load,filter_data,final_question,overview,ROOT,money,pct
 
 
+# Generate all evidence files, technical report, and presentation outline
 def build():
     o,i,m=load();o,f=filter_data(o,i,statuses=['delivered'])
     questions=json.loads((ROOT/'docs/questions.json').read_text(encoding='utf-8'))
@@ -14,6 +15,7 @@ def build():
         r=final_question(n,o,f,m)
         r['table'].to_csv(evidence/f'Q{n:02d}.csv',index=False)
         results.append(r)
+    # Map every workbook question to its dashboard view
     coverage=[]
     for kind in ['final','detailed']:
         for q in questions[kind]:

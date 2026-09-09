@@ -30,6 +30,7 @@ LABELS={'value':'Gross order value (R$)','rating':'Average review / 5','low_rate
  'one_star':'One-star orders','low_count':'Low-rated orders','late_count':'Late orders'}
 
 
+# Load prepared parquet tables, rebuilding from CSVs if needed
 def load():
     if not (ROOT/'data/processed/orders.parquet').exists():
         from prepare_data import prepare
@@ -37,6 +38,7 @@ def load():
     return tuple(pd.read_parquet(ROOT/'data/processed'/f'{x}.parquet') for x in ['orders','items','marketing'])
 
 
+# Apply all user-selected filters to orders and items
 def filter_data(orders,items,start=None,end=None,categories=None,states=None,seller_states=None,
                 sellers=None,statuses=None,payments=None,delivery=None,values=None,threshold=2):
     o=orders.copy()
@@ -57,6 +59,7 @@ def filter_data(orders,items,start=None,end=None,categories=None,states=None,sel
     return o,f
 
 
+# Compute standard KPIs grouped by one or more columns
 def metrics(f,keys):
     keys=[keys] if isinstance(keys,str) else keys
     d=f.drop_duplicates(keys+['order_id'])
@@ -86,6 +89,7 @@ def pct(v): return 'N/A' if pd.isna(v) else f'{v:.1f}%'
 def number(v): return 'N/A' if pd.isna(v) else f'{v:,.0f}'
 
 
+# Apply consistent visual styling to every chart
 def style(fig):
     fig.update_layout(template='plotly_white',paper_bgcolor='white',plot_bgcolor='white',
       font=dict(family='Arial, sans-serif',size=12,color=INK),margin=dict(l=24,r=24,t=36,b=55),
@@ -208,6 +212,106 @@ def box_summary(d,x,y,labels=None):
     return style(fig)
 
 
+# Brazilian state-to-region lookup for geographic filtering
+REGION_MAP={'AC':'Norte','AM':'Norte','AP':'Norte','PA':'Norte','RO':'Norte','RR':'Norte','TO':'Norte',
+    'AL':'Nordeste','BA':'Nordeste','CE':'Nordeste','MA':'Nordeste','PB':'Nordeste','PE':'Nordeste',
+    'PI':'Nordeste','RN':'Nordeste','SE':'Nordeste','DF':'Centro-Oeste','GO':'Centro-Oeste',
+    'MS':'Centro-Oeste','MT':'Centro-Oeste','ES':'Sudeste','MG':'Sudeste','RJ':'Sudeste','SP':'Sudeste',
+    'PR':'Sul','RS':'Sul','SC':'Sul'}
+
+
+def delivery_geo_map(o,f,region_filter=None):
+    """Two-panel scatter map of Brazil: customers by delivery wait, sellers by volume."""
+    delivered=o[o.order_status.eq('delivered')].dropna(subset=['delivery_time','customer_lat','customer_lon']).copy()
+    delivered['region']=delivered.customer_state.map(REGION_MAP)
+    if region_filter:
+        delivered=delivered[delivered.region.isin(region_filter if isinstance(region_filter,list) else [region_filter])]
+    # Aggregate customer locations by zip prefix for a cleaner plot
+    cust=delivered.groupby('customer_zip_code_prefix').agg(
+        lat=('customer_lat','first'),lon=('customer_lon','first'),
+        median_delivery_days=('delivery_time','median'),orders=('order_id','size'),
+        state=('customer_state','first'),city=('customer_city','first')).reset_index()
+    cust['region']=cust.state.map(REGION_MAP)
+    # Build seller layer from items table
+    items_delivered=f[f.order_id.isin(delivered.order_id)].dropna(subset=['seller_lat','seller_lon']).copy()
+    sellers=items_delivered.groupby('seller_id').agg(
+        lat=('seller_lat','first'),lon=('seller_lon','first'),
+        total_orders_volume=('order_id','nunique'),
+        state=('seller_state','first'),city=('seller_city','first')).reset_index()
+    sellers['region']=sellers.state.map(REGION_MAP)
+    if region_filter:
+        sellers=sellers[sellers.region.isin(region_filter if isinstance(region_filter,list) else [region_filter])]
+    if cust.empty and sellers.empty:
+        return empty('No geolocated deliveries in this selection.')
+    fig=make_subplots(rows=1,cols=2,specs=[[{'type':'scattergeo'},{'type':'scattergeo'}]],
+        subplot_titles=['Where customers are, coloured by how long they wait','Where sellers are'],
+        horizontal_spacing=0.02)
+    # Left panel: customer locations colored by median delivery days
+    fig.add_trace(go.Scattergeo(
+        lat=cust.lat.tolist(),lon=cust.lon.tolist(),
+        marker=dict(size=4,color=cust.median_delivery_days.tolist(),
+            colorscale=[[0,'#2a9d2a'],[0.35,'#8cc63f'],[0.55,'#f0d048'],[0.75,'#e8832a'],[1.0,'#c83232']],
+            cmin=cust.median_delivery_days.quantile(0.05) if len(cust) else 5,
+            cmax=cust.median_delivery_days.quantile(0.95) if len(cust) else 25,
+            colorbar=dict(title=dict(text='Median delivery days',side='right'),x=0.45,len=0.7,thickness=12,
+                tickfont=dict(size=10)),
+            line=dict(width=0)),
+        text=(cust.city+', '+cust.state).tolist(),
+        customdata=np.column_stack([cust.state,cust.region,cust.median_delivery_days.round(1),cust.orders]).tolist(),
+        hovertemplate='<b>%{text}</b><br>Region: %{customdata[1]}<br>Median delivery: %{customdata[2]} days<br>Orders: %{customdata[3]}<extra>Customer</extra>',
+        name='Customer locations',showlegend=True,
+        legendgroup='customers'),row=1,col=1)
+    # Right panel: seller locations sized by order volume
+    size_ref=max(sellers.total_orders_volume.max()/35,1) if len(sellers) else 1
+    fig.add_trace(go.Scattergeo(
+        lat=sellers.lat.tolist(),lon=sellers.lon.tolist(),
+        marker=dict(size=(np.clip(sellers.total_orders_volume/size_ref,3,35) if len(sellers) else []).tolist(),
+            color='#8B1A4A',opacity=0.6,line=dict(width=0.3,color='#4A0A2A')),
+        text=(sellers.city+', '+sellers.state).tolist(),
+        customdata=np.column_stack([sellers.state,sellers.region,sellers.total_orders_volume]).tolist(),
+        hovertemplate='<b>%{text}</b><br>Region: %{customdata[1]}<br>Total orders: %{customdata[2]}<extra>Seller</extra>',
+        name='Seller locations, sized by volume',showlegend=True,
+        legendgroup='sellers'),row=1,col=2)
+    # Shared geo settings for both panels
+    geo_common=dict(scope='south america',showland=True,landcolor='#f5f4f0',
+        showcoastlines=True,coastlinecolor='#c8c8c0',showframe=True,framecolor='#d0d0d0',
+        showcountries=True,countrycolor='#c8c8c0',
+        lonaxis=dict(range=[-75,-33]),lataxis=dict(range=[-35,6]),
+        bgcolor='white',resolution=50)
+    fig.update_geos(geo_common,row=1,col=1)
+    fig.update_geos(geo_common,row=1,col=2)
+    # Annotation A: the problem in the North/Northeast
+    fig.add_annotation(x=0.12,y=0.92,xref='paper',yref='paper',
+        text='<b>North and North East wait<br>two to three times longer</b>',showarrow=True,
+        ax=30,ay=40,arrowcolor='#8B1A4A',arrowwidth=1.5,
+        bordercolor='#8B1A4A',borderwidth=2,borderpad=6,bgcolor='rgba(255,255,255,0.92)',
+        font=dict(size=11,color='#8B1A4A'))
+    # Annotation B: seller concentration in Sao Paulo
+    fig.add_annotation(x=0.88,y=0.28,xref='paper',yref='paper',
+        text='<b>Sao Paulo state alone holds<br>60 percent of all sellers<br>and 42 percent of demand</b>',
+        showarrow=True,ax=-30,ay=30,arrowcolor=INK,arrowwidth=1.5,
+        bordercolor=INK,borderwidth=2,borderpad=6,bgcolor='rgba(255,255,255,0.92)',
+        font=dict(size=11,color=INK))
+    # Main title and subtitle
+    fig.update_layout(
+        title=dict(text='The delivery problem is a map problem: supply sits in one corner of a continent<br>'
+            '<span style="font-size:11px;color:#647A77">Sixty percent of sellers are in Sao Paulo state while demand '
+            'is spread across the country. Seven in ten items bought in the North East are shipped from Sao Paulo, '
+            'which is why those customers wait seventeen days instead of seven.</span>',
+            x=0.01,y=0.98,font=dict(size=15,color=INK)),
+        height=560,paper_bgcolor='white',plot_bgcolor='white',
+        font=dict(family='Arial, sans-serif',size=12,color=INK),
+        margin=dict(l=10,r=10,t=80,b=45),
+        legend=dict(orientation='h',y=-0.02,x=0.5,xanchor='center',font=dict(size=11)),
+        modebar_remove=['lasso2d','select2d'],
+        # Source footnote
+        annotations=list(fig.layout.annotations)+[dict(
+            text=f'Source: {len(delivered):,} delivered order items from {sellers.seller_id.nunique():,} active sellers across {delivered.customer_state.nunique()} states.',
+            x=0.01,y=-0.06,xref='paper',yref='paper',showarrow=False,
+            font=dict(size=10,color='#8A9A97'))])
+    return fig
+
+
 def result(insight,charts,table=None,note='',action=''):
     return {'insight':insight,'charts':charts,'table':pd.DataFrame() if table is None else table,'note':note,'action':action}
 
@@ -285,7 +389,9 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         a=a[a.orders.ge(min_n)].sort_values(['local_sellers','orders'],ascending=[True,False])
         z=a[a.local_sellers.eq(0)]
         ins=f'{len(z):,} category–state combinations have at least {min_n} orders and no observed active seller in the same state.'
-        return result(ins,[('Demand pressure · orders / (local sellers + 1)',heat(a,'category','customer_state','demand_pressure',min_n)),
+        geo_chart=delivery_geo_map(o,f)
+        return result(ins,[('Delivery geography of Brazil',geo_chart),
+            ('Demand pressure · orders / (local sellers + 1)',heat(a,'category','customer_state','demand_pressure',min_n)),
             ('Demand versus active local sellers',scatter(a,'local_sellers','orders','value','no_local_supply','category',True))],a,
             'A local seller is a seller in the buyer’s state who sold the selected category during the selected dates, even if they shipped to another state. Other filters still apply. The colour chart divides orders by the number of local sellers plus 1, so places with no recorded local seller can still be shown. The table gives the real counts. No recorded local seller does not mean nobody sells there. These records show purchases, not everything people might want to buy.',
             'Prioritize seller recruitment where observed demand is substantial and local fulfilment is scarce; validate logistics economics before expanding.')

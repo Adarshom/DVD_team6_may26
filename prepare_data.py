@@ -9,6 +9,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent
 
 
+# Great-circle distance between two lat/lon points in km
 def haversine(lat1, lon1, lat2, lon2):
     a, b, c, d = map(np.radians, [lat1, lon1, lat2, lon2])
     h = np.sin((c-a)/2)**2 + np.cos(a)*np.cos(c)*np.sin((d-b)/2)**2
@@ -92,7 +93,7 @@ def prepare(raw=ROOT/'data/raw', out=ROOT/'data/processed'):
     for frame,col in [(geo,'geolocation_zip_code_prefix'),(c,'customer_zip_code_prefix'),
                       (s,'seller_zip_code_prefix'),(o,'customer_zip_code_prefix')]:
         frame[col] = frame[col].astype('string').str.zfill(5)
-    # Deduplicate geolocation before taking the median coordinate per ZIP prefix.
+    # Clean up geolocation table and get median coordinates per zip code
     geo = geo.drop_duplicates()
     valid_geo = geo.geolocation_lat.between(-34,6) & geo.geolocation_lng.between(-74,-32)
     audit['issues']['coordinates_outside_brazil_bounds'] = int((~valid_geo).sum())
@@ -140,6 +141,7 @@ def prepare(raw=ROOT/'data/raw', out=ROOT/'data/processed'):
     leads['first_contact_date'] = pd.to_datetime(leads.first_contact_date)
     deals['won_date'] = pd.to_datetime(deals.won_date)
     leads['origin'] = leads.origin.fillna('unknown').str.replace('_',' ').str.title()
+    # Combine leads with closed deals to track seller acquisition
     m = leads.merge(deals,on='mql_id',how='left',validate='one_to_one')
     m['converted'] = m.seller_id.notna()
     m['conversion_days'] = (m.won_date-m.first_contact_date).dt.total_seconds()/86400
@@ -157,7 +159,7 @@ def prepare(raw=ROOT/'data/raw', out=ROOT/'data/processed'):
         reviews_90d=('review_score','count'),late_90d=('late_flag','mean'),deliveries_90d=('late_flag','count')))
     m = m.merge(a,on='seller_id',how='left',validate='many_to_one')
     for col in ['value_90d','orders_90d','reviews_90d','deliveries_90d']: m[col] = m[col].fillna(0)
-    # Zeros mean no matched observed sales, not proof the seller never traded.
+    # Final data integrity checks before saving
     audit['checks'] = {'order_grain_unique':bool(o.order_id.is_unique),
         'item_grain_unique':bool(not i.duplicated(['order_id','order_item_id']).any()),
         'item_count_preserved':len(i)==audit['sources']['order_items_dataset']['rows'],

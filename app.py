@@ -34,6 +34,7 @@ def nav(label,value,small=''):
     return dcc.Link([html.Span(small,className='nav-number'),html.Span(label)],href='#'+value,refresh=False,className='nav-link',id='nav-'+value)
 
 
+# Main page layout with sidebar navigation and content area
 app.layout=html.Div([
  dcc.Location(id='url',refresh=False),dcc.Store(id='table-store'),dcc.Store(id='active-nav'),dcc.Download(id='download-data'),
  html.A('Skip to analysis',href='#main-content',className='skip-link'),
@@ -108,12 +109,14 @@ def method_content():
     ])
 
 
+# All filter inputs that trigger a page re-render
 INPUTS=[Input('url','hash'),Input('dates','start_date'),Input('dates','end_date'),Input('categories','value'),Input('states','value'),
  Input('seller-states','value'),Input('sellers','value'),Input('statuses','value'),Input('payments','value'),Input('delivery','value'),
  Input('values','value'),Input('threshold','value'),Input('min-n','value'),Input('top-n','value'),Input('scenario','value'),
  Input('lead-dates','start_date'),Input('lead-dates','end_date'),Input('origins','value'),Input('min-leads','value'),Input('detail-question','value')]
 
 
+# Central callback that rebuilds the page when any filter changes
 @app.callback(Output('page-title','children'),Output('page-subtitle','children'),Output('main-content','children'),
  Output('table-store','data'),Output('commerce-controls','style'),Output('marketing-controls','style'),Output('lab-controls','style'),*INPUTS)
 def render_page(hash_value,start,end,categories,states,seller_states,sellers,statuses,payments,delivery,values,threshold,min_n,top_n,scenario,
@@ -165,12 +168,14 @@ def render_page(hash_value,start,end,categories,states,seller_states,sellers,sta
             html.Div([html.H2('Decision to consider',className='eyebrow'),html.P(r['action'] or 'Use these results to choose what to check next. Compare similar products, sellers or delivery routes before making changes.')],className='summary-action'),
             html.Div([html.H2('Interpretation and scope',className='eyebrow'),html.P(r['note'] or 'No orders or leads match these filters. Choose a wider date range or remove a filter to see results.')],className='summary-scope'),
         ],className='analysis-summary',**{'aria-label':'Question, findings, decision and scope'}),
-        html.Div([html.Section([html.H3(name),dcc.Graph(figure=fig,id={'type':'chart','index':idx},config={'displaylogo':False,'responsive':True,
-          'toImageButtonOptions':{'format':'png','scale':2,'filename':'marketplace_chart'}})],className='chart-card') for idx,(name,fig) in enumerate(r['charts'])],className='chart-grid'),
+        html.Div([html.Section([html.H3(name),dcc.Graph(figure=fig,id={'type':'chart','index':f"{page}_{idx}"},config={'displaylogo':False,'responsive':True,
+          'toImageButtonOptions':{'format':'png','scale':2,'filename':'marketplace_chart'}})],
+          className='chart-card chart-card-wide' if any(getattr(t,'type','')=='scattergeo' for t in fig.data) else 'chart-card') for idx,(name,fig) in enumerate(r['charts'])],className='chart-grid'),
         table])
     return title,subtitle,content,rows,{'display':'none' if marketing else 'block'},{'display':'block' if marketing else 'none'},{'display':'block' if page=='lab' else 'none'}
 
 
+# Sends the currently visible evidence table as a CSV download
 @app.callback(Output('download-data','data'),Input('export','n_clicks',allow_optional=True),State('table-store','data'),prevent_initial_call=True)
 def export_data(clicks,rows):
     if not clicks or not rows:return no_update

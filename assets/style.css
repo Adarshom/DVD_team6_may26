@@ -6,7 +6,8 @@
 @media(max-width:480px){.filter-row,.advanced-grid{grid-template-columns:1fr}.chart-card{padding:15px 4px 0}.chart-card h3{font-size:11px}.kpi-value{font-size:27px}footer{display:block;line-height:2}}
 /* A responsive Dash Graph needs an explicit parent height. */
 .chart-card .dash-graph{height:380px!important;min-height:380px}.chart-card .js-plotly-plot{min-height:0}
-@media(max-width:480px){.chart-card .dash-graph{height:370px!important;min-height:370px}}
+.chart-card-wide{grid-column:1/-1}.chart-card-wide .dash-graph{height:560px!important;min-height:560px}
+@media(max-width:480px){.chart-card .dash-graph{height:370px!important;min-height:370px}.chart-card-wide .dash-graph{height:420px!important;min-height:420px}}
 
 /* Keep the question, finding, next step and reading guide together. */
 .analysis-summary{display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:22px}
