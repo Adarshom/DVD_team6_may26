@@ -39,17 +39,14 @@ app.layout=html.Div([
  html.A('Skip to analysis',href='#main-content',className='skip-link'),
  html.Aside([
    html.Div([html.Div('M',className='brand-mark'),html.Div([html.Strong('MARKETPLACE'),html.Span('OBSERVATORY')])],className='brand'),
-   html.Div('GROWTH, WITH CARE.',className='eyebrow side-caption'),
    nav('Executive overview','overview','◎'),
    html.Div('THE TEN QUESTIONS',className='nav-heading'),
    *[nav(t,f'q{k+1}',f'{k+1:02d}') for k,t in enumerate(TITLES)],
    html.Div('EXPLORE THE EVIDENCE',className='nav-heading'),
    nav('Detailed question lab','lab','↗'),nav('Data and methodology','methods','≡'),
-   html.Div([html.Strong('DVD · 2026 T2 · Group 6'),html.P('Brazil e-commerce study'),html.Small('Historical data · 2016–2018')],className='sidebar-foot')
  ],className='sidebar'),
  html.Main([
-   html.Header([html.Div([html.Span('A VISUAL STUDY OF E-COMMERCE',className='eyebrow'),html.H1(id='page-title'),html.P(id='page-subtitle',className='subtitle')]),
-       html.Span('●  SOURCE-BACKED ANALYSIS',className='snapshot-badge')],className='page-header'),
+   html.Header([html.H1(id='page-title'),html.P(id='page-subtitle',className='subtitle')],className='page-header'),
    html.Div(id='commerce-controls',children=[
      html.Div([
        field('Purchase dates',dcc.DatePickerRange(id='dates',start_date=START,end_date=END,min_date_allowed=START,max_date_allowed=END,display_format='DD MMM YY')),
@@ -79,7 +76,7 @@ app.layout=html.Div([
    html.Div(id='lab-controls',children=[field('Choose a detailed workbook question',dcc.Dropdown(id='detail-question',
        options=[{'label':f'{q["number"]:02d} · {q["question"]}','value':q['number']} for q in QUESTIONS['detailed']],value=1,clearable=False))],style={'display':'none'}),
    dcc.Loading(type='circle',color='#117B75',delay_show=200,children=html.Div(id='main-content')),
-   html.Footer([html.Span('DVD TEAM 6 · MARKETPLACE OBSERVATORY'),html.Span('Orders → fulfilment → experience → action')])
+   html.Footer('DVD TEAM 6 · MARKETPLACE OBSERVATORY')
  ],className='main')
 ],className='shell')
 
@@ -162,12 +159,15 @@ def render_page(hash_value,start,end,categories,states,seller_states,sellers,sta
        ],className='evidence') if rows else html.Div()
     content=html.Div([
         html.Div(scope,className='scope-line'),html.Div(cards,className='kpi-grid'),
-        html.Div([html.Span('THE QUESTION',className='eyebrow'),html.P(question,className='question-text')],className='question-heading'),
-        html.Div([html.Span('WHAT THE SELECTION SHOWS',className='eyebrow'),html.H2(r['insight'])],className='insight'),
+        html.Section([
+            html.Div([html.H2('The question',className='eyebrow'),html.P(question)],className='summary-question'),
+            html.Div([html.H2('What the selection shows',className='eyebrow'),html.P(r['insight'])],className='summary-insight'),
+            html.Div([html.H2('Decision to consider',className='eyebrow'),html.P(r['action'] or 'Use these results to choose what to check next. Compare similar products, sellers or delivery routes before making changes.')],className='summary-action'),
+            html.Div([html.H2('Interpretation and scope',className='eyebrow'),html.P(r['note'] or 'No orders or leads match these filters. Choose a wider date range or remove a filter to see results.')],className='summary-scope'),
+        ],className='analysis-summary',**{'aria-label':'Question, findings, decision and scope'}),
         html.Div([html.Section([html.H3(name),dcc.Graph(figure=fig,id={'type':'chart','index':idx},config={'displaylogo':False,'responsive':True,
           'toImageButtonOptions':{'format':'png','scale':2,'filename':'marketplace_chart'}})],className='chart-card') for idx,(name,fig) in enumerate(r['charts'])],className='chart-grid'),
-        html.Div([html.Span('DECISION TO CONSIDER',className='eyebrow'),html.P(r['action'] or 'Use this evidence to target follow-up investigation. Compare like-for-like segments before changing policy.')],className='action-card'),
-        html.Div([html.Strong('Interpretation and scope. '),r['note']],className='analysis-note'),table])
+        table])
     return title,subtitle,content,rows,{'display':'none' if marketing else 'block'},{'display':'block' if marketing else 'none'},{'display':'block' if page=='lab' else 'none'}
 
 

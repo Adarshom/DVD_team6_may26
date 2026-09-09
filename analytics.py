@@ -229,7 +229,7 @@ def overview(o,f,min_n=30):
     return result(insight,[('Growth and customer experience',style(fig)),('Economic importance × dissatisfaction',scatter(a,'value','low_rate','orders','late_rate','category',True)),
         ('The delivery promise matters',rating_mix(o[o.delivery_status.ne('Unobserved')],'delivery_status')),('Where low-rated orders accumulate',bar(a,'category','low_count'))],
         a.sort_values('low_count',ascending=False),
-        'Historical snapshot. Gross order value includes freight and is not marketplace net revenue. Associations do not establish causation. Sparse first/last months are incomplete; no growth forecast is inferred.',
+        'These are past orders from the selected dates. Order value adds the price of the selected items and shipping; it is not the money the marketplace keeps. Low ratings follow your chosen star limit. Late orders may have worse reviews, but this alone does not show that lateness caused them. The first and last months have only partial records, so they cannot tell us how sales will grow.',
         'Investigate large categories and delivery lanes with both substantial value and repeated poor outcomes. Use the question pages to separate scale, service and acquisition risks.')
 
 
@@ -255,7 +255,7 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         return result(f'Repeat buyers account for {pct(share)} of selected gross value. These are customers with 2+ delivered orders in the full observed history.',
           [('Who contributes value?',style(fig)),('Experience comparison · row-normalized colours',style(fig2)),
            ('First delivery experience and observed 90-day return',bar(r,'delivery_status','repeat_rate',horizontal=False))],a,
-          'Repeat buyer includes their first order; is_repeat marks only second and later delivered orders. Heatmap hover shows original units; late rate and freight burden are percentages. Return chart uses only first purchases with 90 days of follow-up. It does not prove what causes retention.',
+          'A repeat buyer has at least two delivered orders in the full saved history. Their first order also counts toward repeat-buyer value; the table’s is_repeat field marks only later orders. In the colour chart, point to a cell to see its value. Late deliveries and shipping as a share of item price are shown as percentages. The return chart only uses first purchases with 90 days of records afterward. It cannot tell us why a buyer came back.',
           'Protect first-order delivery reliability; validate retention interventions with a controlled experiment.')
     if n==2:
         eligible=o[o.late_flag.notna()]
@@ -271,7 +271,7 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         return result(insight,[('Satisfaction as the promise is missed · 95% mean CI',line),
            ('Does the pattern differ by category?',heat(h,'category','delay_bucket','rating',min_n,'reviews')),
            ('Does the pattern differ by customer state?',heat(metrics(d,['customer_state','delay_bucket']),'customer_state','delay_bucket','rating',min_n,'reviews'))],a,
-           'Bins use calendar-day lateness; 0 means delivered on the promised date. The largest adjacent-bin drop is descriptive and depends on binning, sample size and category mix, not a validated causal threshold. Heatmaps show the highest-volume 18 rows.',
+           'Days are counted by calendar date: 0 means delivery on the promised date, and 3 means three days late. The chart groups orders by how early or late they arrived. The biggest rating drop can change when the groups, products or number of reviews change. It does not prove that one exact day causes bad reviews. The colour charts show up to 18 rows with the most orders.',
            'Escalate delivery exceptions before the promise is missed, then test category-specific alert thresholds.')
     if n==3:
         a=metrics(f,['category','customer_state'])
@@ -287,7 +287,7 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         ins=f'{len(z):,} category–state combinations have at least {min_n} orders and no observed active seller in the same state.'
         return result(ins,[('Demand pressure · orders / (local sellers + 1)',heat(a,'category','customer_state','demand_pressure',min_n)),
             ('Demand versus active local sellers',scatter(a,'local_sellers','orders','value','no_local_supply','category',True))],a,
-            'Supply means sellers observed trading in the period and category, across all buyer states. Heatmap uses orders / (local sellers + 1), a smoothed descriptive ranking that keeps zero-supply cells visible; exact counts are in the table. Zero observed supply is not proof of an unserved market. Demand reflects transactions, not latent demand. Other filters still constrain supply.',
+            'A local seller is a seller in the buyer’s state who sold the selected category during the selected dates, even if they shipped to another state. Other filters still apply. The colour chart divides orders by the number of local sellers plus 1, so places with no recorded local seller can still be shown. The table gives the real counts. No recorded local seller does not mean nobody sells there. These records show purchases, not everything people might want to buy.',
             'Prioritize seller recruitment where observed demand is substantial and local fulfilment is scarce; validate logistics economics before expanding.')
     if n==4:
         a=metrics(f,['seller_state','customer_state']);a['lane']=a.seller_state+' → '+a.customer_state
@@ -298,7 +298,7 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
           [('Cost versus service · each bubble is a lane',scatter(a,'freight_burden','delivery_time','orders','late_rate','lane',True)),
            ('Distance versus freight burden',scatter(a,'distance','freight_burden','orders','rating','lane')),
            ('Delivery time across distance bands · 95% mean CI',line)],a.sort_values('late_count',ascending=False),
-          'Lane distance is the average straight-line seller-to-customer ZIP distance. Freight burden = freight / merchandise value. R$/km excludes distances below 1 km. No carrier costs, subsidies, cart events or promised service tiers are supplied.',
+          'A delivery route runs from the seller’s state to the buyer’s state. Distance is the average straight-line distance between their postal areas, not the road distance. Shipping share means shipping charges divided by item prices. For example, R$10 shipping on R$100 of items is 10%. Cost per kilometre leaves out distances under 1 km. We do not have the delivery company’s costs, discounts, abandoned baskets or promised delivery options, so we cannot judge profit or fairness.',
           'Audit expensive, slow lanes by carrier and product mix. Freight paid alone cannot establish logistics profitability or fairness.')
     if n==5:
         a=metrics(f,'category');a=a[a.reviews.ge(min_n)].copy()
@@ -310,7 +310,7 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         return result(f'{money(exposed)} ({pct(100*exposed/max(total,1))}) sits in {len(risk)} high-value categories with above-benchmark low-rating shares.',
           [('Where value and experience conflict',scatter(a,'value','low_rate','orders','priority','category')),
            ('Category value concentration',pareto(a,'category','value'))],a.sort_values('value',ascending=False),
-           f'High value = at or above eligible-category median ({money(cut)}); poor satisfaction = above the selection’s {pct(benchmark)} low-rating share. Exposure is selected gross value, not predicted lost revenue. Review threshold follows the filter.',
+           f'High value means a category’s item and shipping total is at least {money(cut)}, the middle value among categories with enough reviews. A category is flagged when its share of low ratings is above {pct(benchmark)}, the share for all reviewed orders in this selection. Your chosen star limit decides what counts as a low rating. The flagged amount is the value of these purchases, not a prediction of money that will be lost.',
            'Fix service in economically significant categories before reducing catalogue breadth. Protect high-value categories with healthy satisfaction.')
     if n==6:
         a=metrics(f,'seller_id').sort_values('value',ascending=False)
@@ -329,7 +329,7 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
           [('How concentrated is seller value?',pareto(a,'seller_id','value')),
            ('Category seller concentration · HHI',bar(h,'category','HHI')),
            ('Category concentration heatmap',heat(h.assign(metric='HHI'),'category','metric','HHI'))],h.sort_values('HHI',ascending=False),
-           'Seller value is the sum of that seller’s items and freight, never the full value of a shared order. HHI = 10,000 × sum of squared seller value shares. The 2,500 threshold follows the workbook as a descriptive risk screen, not a regulatory conclusion.',
+           'Each seller gets only the value of their own items and shipping, even when an order has several sellers. HHI is a score for how much sales depend on a few sellers: a higher score means more dependence, and 10,000 means one seller has all the value. This study flags scores above 2,500 as a reason to check backup sellers. That is a study rule, not a legal judgment.',
            'Develop backup supply in concentrated categories; account for replacement demand before interpreting exposure as lost revenue.')
     if n in [7,8,9]:return marketing_question(n,m,min_n)
     if n==10:
@@ -345,7 +345,7 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         return result(ins,[('Delivery distributions by full order value',style(fig)),
             ('Experience gaps across categories',heat(h,'category','value_band','rating',min_n,'reviews')),
             ('Installments and order value',box_summary(o,'payment_installments','order_value'))],a,
-            'Value bands use the entire order, even under an item/category selection; aggregate value elsewhere attributes only selected items. Processing fees and margins are absent. No claim is made about installment profitability.',
+            'Price groups use the full order total, even when you choose just one product category. Value totals elsewhere count only the selected items and their shipping. Each order has one review score and one delivery record. We do not have payment fees or the cost of the goods, so we cannot say whether paying in several parts earns more profit.',
             'Check high-value service gaps within categories before designing a premium-order service policy.')
 
 
@@ -369,7 +369,7 @@ def marketing_question(n,m,min_n):
         ins=f'{int(m.converted.sum()):,} of {len(m):,} leads converted ({pct(100*m.converted.mean())}).'
         if winner is not None:ins+=f' {winner.origin} has the highest point estimate among named eligible sources: {pct(winner.conversion)} ({int(winner.wins)}/{int(winner.leads)}).'
         return result(ins,[('From lead to observed seller',style(fig)),('Source conversion · 95% Wilson CI',style(rates))],a,
-           'Lead cohort is filtered by first-contact date. Closed outcomes use all supplied won dates, so newer leads may have less follow-up. Unknown is not a named channel; it remains in totals and the chart. Confidence intervals may overlap, so the highest point estimate does not establish a reliably superior source. Matched means seller_id exists in e-commerce items; it is not a full-business activation rate.',
+           'A lead is a possible seller contacted by the sales team. The date filter uses their first contact, while a successful sign-up can be on any date in the records. Newer leads may have had less time to sign up. Unknown means the source was not recorded and stays in the totals. The lines beside the bars show how uncertain the rates are; overlapping ranges mean the highest bar may not be the best source. Matched means a seller ID also appears in the order-item records, not that we can see all of that seller’s business.',
            'Use conversion and uncertainty alongside downstream trading quality before moving acquisition budget. Marketing spend and CAC are unavailable.')
     wins=m[m.converted].copy()
     mature=wins[wins.mature_90d & wins.matched_seller].copy()
@@ -388,7 +388,7 @@ def marketing_question(n,m,min_n):
            ('Matched mature sellers · median first-90-day performance',scatter(eligible,'orders_90d','value_90d','sellers','origin','origin',True)),
            ('Business profile of closed sellers',style(px.histogram(wins,x='origin',color='business_type',barmode='stack',labels=LABELS))),
            ('Catalogue-size declarations · sparse coverage',catalog_chart)],a,
-           'Zero revenue declarations are retained in source data but excluded from this positive-only plot; they are not assumed to be real zero businesses. Downstream chart requires 5 matched sellers per source and a full 90-day observation window. Results exclude unmatched sellers; source-level seller counts are shown.',
+           'Reported monthly sales of zero stay in the saved data but are left out of the sales-value chart. We do not know whether zero means no sales or missing information. The first-90-day sales chart only shows sources with at least 5 sellers linked to order records and 90 full days of records after sign-up. Sellers we cannot link are left out, so these results do not describe every seller. Seller counts for each source are shown in the table.',
            'Improve seller qualification data, then compare equal-age seller cohorts rather than raw totals or self-reported revenue.')
     a=mature.groupby('conversion_cohort',observed=True).agg(sellers=('seller_id','nunique'),value_90d=('value_90d','median'),
          orders_90d=('orders_90d','median'),rating_90d=('rating_90d','mean'),late_90d=('late_90d','mean')).reset_index()
@@ -398,7 +398,7 @@ def marketing_question(n,m,min_n):
     corr=mature[['conversion_days','value_90d']].corr(method='spearman').iloc[0,1] if len(mature)>2 else np.nan
     return result(f'{len(mature):,} matched sellers have a full 90-day observation window. Conversion speed versus 90-day value has Spearman ρ = {corr:.2f}.' if pd.notna(corr) else 'Insufficient mature matched sellers to assess conversion speed.',
         [('Conversion speed versus observed value',sc),('Equal-age cohort comparison',style(lines)),('Conversion speed versus customer experience',cx)],a,
-        'Only delivered orders purchased from won_date through day 89 are counted. Pre-win orders are excluded. Unmatched sellers are not labelled organic. Ratings in the cohort table are seller-weighted; CX scatter requires 5 reviews per seller. Correlation is unadjusted and does not establish predictive or causal value.',
+        'The sales charts use sellers linked to order records with 90 full days of records after sign-up. Only purchases made from the sign-up day through day 89 that were delivered count; earlier purchases do not. Sellers we cannot link have an unknown source. Each seller has equal weight in the group’s average rating, and the rating chart requires at least 5 reviews per seller. A pattern between faster sign-up and higher sales does not show that one causes the other or predict future sales.',
         'Do not optimize sales-cycle speed alone. Track seller activation, equal-age trading value and customer outcomes together.')
 
 
@@ -412,7 +412,7 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         a=metrics(f,'seller_id');a=a[a.deliveries.ge(min_n)]
         return result(f'The 10 sellers with the most late orders account for {number(a.nlargest(10,"late_count").late_count.sum())} late seller–order involvements.',
             [('Largest late-order volumes',bar(a,'seller_id','late_count')),('Separate scale from late rate',scatter(a,'orders','late_rate','late_count',None,'seller_id'))],a.sort_values('late_count',ascending=False),
-            'Orders involving multiple sellers can appear under each seller. This is seller involvement, not proof that the seller caused lateness.')
+            'A late order with two sellers is counted once for each seller. Adding seller counts can therefore count the same order twice. Having items in a late order does not prove that a seller caused the delay.')
     if n==2:
         a=metrics(f,'seller_id');a=a[a.reviews.ge(min_n)]
         b=metrics(f,'category');b=b[b.reviews.ge(min_n)]
@@ -420,7 +420,7 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         return result('Compare absolute one-star counts across sellers, categories and customer states.',
             [('One-star seller concentration',pareto(a,'seller_id','one_star')),('Categories with the most one-star experiences',bar(b,'category','one_star')),
              ('Customer regions with the most one-star experiences',bar(c,'customer_state','one_star'))],a.sort_values('one_star',ascending=False),
-             'One star is fixed at rating 1 regardless of the low-rating threshold. Seller/category counts can overlap for shared orders.')
+             'This page always counts reviews with exactly 1 star, even if you change the low-rating setting. An order with several sellers or product categories can appear in more than one group, so group counts may include the same order.')
     if n in [3,19]:
         a=metrics(f,['seller_state','customer_state']);a=a[a.orders.ge(min_n)]
         a['lane']=a.seller_state+' → '+a.customer_state
@@ -432,14 +432,14 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
           [('Average delivery days',heat(a,'seller_state','customer_state','delivery_time',min_n)),
            ('Average review score',heat(a,'seller_state','customer_state','rating',min_n,'reviews')),
            ('Lanes with the most harm',bar(a,'lane','harm_count'))],a.sort_values('harm_count',ascending=False),
-           'Harm means a late delivery OR a low rating, counted once per lane–order. Unknown outcomes are not counted as observed harm. Lane membership does not identify the responsible carrier.')
+           'A route connects a seller state to a buyer state. Here, harm means an order arrived late or received a rating at or below your chosen star limit. An order with both problems counts only once on that route. Missing results do not count as known problems. These records do not show which delivery company was responsible.')
     if n==5:
         a=metrics(f,'category');a=a[a.orders.ge(min_n)]
         return result('Freight burden highlights categories where shipping consumes a large share of merchandise value.',
             [('Category freight / merchandise value',bar(a,'category','freight_burden')),
              ('Typical item shipping cost relative to price',style(px.box(f[f.category.isin(a.nlargest(10,'freight_burden').category)],
                 x='category',y='freight_ratio',points=False,labels={'freight_ratio':'Item freight / price (ratio)','category':'Category'})))],a.sort_values('freight_burden',ascending=False),
-             'Category bar is the ratio of sums; distribution is individual item freight / price. These are intentionally different summaries.')
+             'The category bar divides total shipping charges by total item prices. For example, R$20 shipping on R$100 of items gives 20%. The other chart does this calculation for each item separately, so it shows how much the share varies between items.')
     if n in [6,7]:
         q=f[['product_weight_g','product_volume_cm3','freight_value','delivery_time','category','order_id']].dropna(subset=['product_weight_g','freight_value'])
         line,a=binned(q,'product_weight_g','freight_value',min_n=min_n)
@@ -448,13 +448,13 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         return result('Compare weight and size bands with freight and delivery outcomes, then use category filters to reduce product-mix differences.',
             [('Weight versus freight · binned mean and 95% CI',line),('Size versus delivery duration · binned mean',line2),
              ('Which categories combine weight and lateness?',scatter(c,'product_weight_g','late_rate','orders',None,'category'))],c,
-             'The first two panels are item-weighted associations; shared order outcomes repeat across items. Their intervals are descriptive and do not account for order clustering. Weight/size cannot isolate carrier or category effects.')
+             'The first two charts count each item separately. A three-item order repeats the same delivery result three times. The ranges around the averages do not account for this repetition, so they may look more certain than they are. Heavier or larger products may also use different delivery companies. These charts cannot tell which difference caused a delay.')
     if n==8:
         line,a=binned(o[o.late_flag.notna()],'processing_time','late_flag',bins=[0,1,2,3,5,7,14,30,np.inf],min_n=min_n)
         line.update_yaxes(tickformat='.0%',title='Late-delivery share')
         return result('Handling-time bands show whether slower seller handoff is associated with eventual lateness.',
           [('Seller handling versus late-delivery share',line),('Handling-time distribution by delivery outcome',style(px.box(o,x='delivery_status',y='processing_time',points=False,labels=LABELS)))],a,
-          'Negative stage durations are excluded and recorded in the quality log. Approval-to-carrier duration is a handling proxy; it cannot attribute delay to an individual seller in a shared order.')
+          'Handling time runs from payment approval until the order is handed to the delivery company. Records where the end comes before the start are left out and listed under data-quality issues. When an order has several sellers, this shared time cannot tell us which seller caused a delay.')
     if n==9:
         d=o[o.late_flag.notna()].dropna(subset=['approval_time','processing_time','carrier_time'])
         d=d.melt(id_vars=['order_id'],value_vars=['approval_time','processing_time','carrier_time'],var_name='stage',value_name='days')
@@ -462,12 +462,13 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         winner=a.loc[a.mean_days.idxmax(),'stage'] if len(a) else 'unobserved'
         return result(f'{winner.replace("_"," ").title()} is the longest average stage among complete, chronologically valid delivered journeys.',
             [('Time spent at each stage',bar(a,'stage','mean_days',horizontal=False)),('Stage duration distributions',style(px.box(d,x='stage',y='days',points=False)))],a,
-            'All three stages use the same complete-order cohort, so their means sum to the mean end-to-end duration. Duration is not delay against a stage SLA, because no stage SLA is supplied.')
+            'Only delivered orders with valid times for all three steps are included: payment approval, handoff to the delivery company, and delivery to the buyer. The average times add up to the average full journey. We do not have promised times for each step, so a long step does not necessarily mean someone missed a deadline.')
     if n==12:
         a=metrics(f,'category');a=a[a.reviews.ge(min_n)]
         return result('Review visibility and economic importance are distinct: compare reviewed-order counts with allocated gross value.',
           [('Review count versus value',scatter(a,'reviews','value','orders','rating','category')),
-           ('Category rating versus value',scatter(a,'rating','value','reviews',None,'category'))],a.sort_values('value',ascending=False))
+           ('Category rating versus value',scatter(a,'rating','value','reviews',None,'category'))],a.sort_values('value',ascending=False),
+           'Review counts include only orders with a star rating. Each category gets the price and shipping of its own selected items. An order with items in two categories can count as a review for both. A high review count means more recorded feedback, not that the reviews were seen by more people.')
     if n==13:
         # Equal halves of the chosen observed time span, avoiding an arbitrary latest sparse month.
         split=o.order_purchase_timestamp.min()+(o.order_purchase_timestamp.max()-o.order_purchase_timestamp.min())/2
@@ -483,10 +484,10 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         return result(f'Sellers are compared before and after {split.date()}, requiring at least {min_n} reviews in each half.',
             [('Scale versus rating change',scatter(d,'orders_after','rating_change','value_after','late_change_pp','seller_id',True)),
              ('Five largest rating declines · monthly evidence',style(fig))],d.sort_values('rating_change'),
-             'Equal time halves reduce unequal-window bias but do not adjust category mix or seasonality. Monthly points below the review minimum are omitted. This is a descriptive risk screen.')
+             'The observed purchase dates are split into two equal time periods. Sellers need enough reviews in both periods to be compared. Months with too few reviews are left out of the line chart. Different products or holiday shopping can still change ratings, so a fall in ratings is a reason to investigate, not proof the seller got worse.')
     if n==14:return result('Compare the rating mix for early, on-date and late deliveries.',
         [('Rating distribution by promise adherence',rating_mix(o[o.delivery_status.ne('Unobserved')],'delivery_status'))],
-        metrics(f,'delivery_status'), 'On time means delivered on the promised calendar date; early orders are shown separately.')
+        metrics(f,'delivery_status'), 'On time means delivered on the exact promised date. Orders delivered before that date are shown as early. Orders without a known delivery result are left out of this chart.')
     if n in [15,27]:
         d=f.drop_duplicates(['order_id','category'])
         a=d.groupby('category').agg(orders=('order_id','size'),installment_share=('installment_flag','mean'),
@@ -494,7 +495,7 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         return result('Installment use is associated with order value, but payment profitability cannot be calculated without fee and margin data.',
            [('Installment dependence by category',bar(a,'category','installment_share')),
             ('Full order value by installment count',style(px.box(o,x='payment_installments',y='order_value',points=False,labels=LABELS)))],a.sort_values('installment_share',ascending=False),
-            'Installment count is the maximum across the order’s payment records; payment-type filters match any payment type used. No assumed processing fee is applied.')
+            'Paying in instalments means splitting a payment into parts. If an order has several payment records, we use the largest number of parts recorded. A payment-type filter includes an order if it used that type at all. We do not add an estimated payment fee, because the records do not give one.')
     if n==16:
         demand=f.drop_duplicates(['order_id','customer_state']).groupby('customer_state').size()
         supply=f.drop_duplicates(['order_id','seller_state']).groupby('seller_state').size()
@@ -504,27 +505,27 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         fig.add_bar(y=a.state,x=-a.seller_orders,orientation='h',name='Seller order involvements',marker_color=BLUE)
         fig.update_layout(barmode='relative',xaxis_title='Orders · supply shown to the left',yaxis_title='State',height=600)
         return result('Compare where orders originate with where sellers fulfil them.',[('Buyer and seller footprints',style(fig))],a,
-            'Orders with sellers in multiple states contribute to each origin state. Seller-state counts can therefore exceed unique marketplace orders.')
+            'An order with sellers in two states counts once for each seller state. The buyer’s state counts that order once. Seller-state totals can therefore be larger than the number of orders in the selection.')
     if n==18:
         a=metrics(f,'category');breadth=f.groupby('category').customer_state.nunique().rename('states_served')
         a=a.merge(breadth,on='category');a=a[a.orders.ge(min_n)];a['orders_per_seller']=a.orders/a.sellers
         return result('Find categories with broad observed geographic demand and relatively few active trading sellers.',
             [('Geographic breadth versus active seller count',scatter(a,'sellers','states_served','orders','orders_per_seller','category',True)),
              ('Demand per observed active seller',bar(a,'category','orders_per_seller'))],a.sort_values('orders_per_seller',ascending=False),
-            'States served counts customer states in the selection. Seller counts represent observed transactions, not the full registered catalogue. Demand per seller is a descriptive opportunity screen, not a capacity estimate.')
+            'States served means the number of buyer states with purchases in this selection. Seller counts include only sellers with recorded sales, not everyone registered to sell. Orders per seller can help choose where to investigate, but cannot tell us how many more orders those sellers could handle.')
     if n==20:
         cols=['product_weight_g','product_volume_cm3','product_photos_qty','product_description_lenght','price','review_score']
         corr=f[cols].corr(method='spearman')
         fig=px.imshow(corr,zmin=-1,zmax=1,color_continuous_scale='RdBu',text_auto='.2f',aspect='auto')
         return result('Spearman correlation compares monotonic associations between product characteristics, price and order ratings.',
            [('Product and listing attribute associations',style(fig))],corr.reset_index(),
-           'Item-weighted, pairwise-complete correlation. Order ratings repeat across items; shared orders and category mix can confound these associations. Correlation is not feature importance.')
+           'Each item counts separately. For each pair of measures, items missing either value are left out. Items in the same order share its rating, so that review may count several times. The score runs from −1 to 1: near 1 means the measures tend to rise together; near −1 means one tends to fall as the other rises. Different product types can affect the score. It does not tell us which product feature caused a rating.')
     if n==21:
         a,t=binned(f,'product_photos_qty',bins=[0,1,2,3,5,10,np.inf],min_n=min_n)
         b,u=binned(f,'product_description_lenght',min_n=min_n)
         return result('Compare listing richness with ratings within selected categories; do not interpret the pooled association as a listing-quality effect.',
             [('Photo count and average rating',a),('Description length and average rating',b)],t,
-            'Observations are item-weighted; confidence intervals are descriptive and do not account for repeated products or shared order ratings. No invented listing-richness score is used.')
+            'These charts group items by their photo count or description length and compare average order ratings. Items in the same order share a rating. The ranges around the averages do not account for shared ratings or repeated products, so they may look more certain than they are. More photos or longer text alone cannot be shown to cause better reviews.')
     if n==22:
         cols=['delay_days','processing_time','freight_value','product_weight_g','product_photos_qty','product_description_lenght']
         # Use one row per order, averaging product attributes within the selected items.
@@ -534,7 +535,7 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         a=a[a.pairs.ge(min_n)]
         return result('Compare unadjusted associations with low ratings, using one observation per order.',
            [('Operational and listing factors · Spearman ρ',bar(a,'factor','association'))],a,
-           'Within-order product attributes are averaged. Pairwise samples differ with missingness. This is not a fitted predictive model and does not establish which factor causes dissatisfaction.')
+           'Each order counts once. Product details, such as weight and photo count, are averaged across its selected items. Each comparison leaves out orders missing either value, so the number of orders can differ. A positive score means higher values tend to go with more low ratings; a negative score means fewer. This does not prove what caused a bad review or predict the next one.')
     if n==23:
         a=metrics(f,['category','seller_id','customer_state']);a=a[a.reviews.ge(min_n)]
         a=a[a.low_count.gt(0)].nlargest(40,'low_count')
@@ -542,7 +543,7 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
              color_continuous_scale=['#F6E1C4',RED],labels=LABELS) if len(a) else empty()
         return result('Drill into the largest category, seller and customer-state combinations associated with low ratings.',
             [('Largest 40 eligible customer-experience hotspots',style(fig))],a,
-            'A shared order can appear under multiple sellers or categories. Treemap totals represent involvements and are not additive unique-order harm.')
+            'The chart shows up to 40 groups with the most low-rated orders, among groups with enough reviews. A group combines category, seller and buyer state. An order with several sellers or categories can appear in several groups, so adding the blocks may count that order more than once.')
     if n==24:
         d=f.drop_duplicates(['seller_id','order_id']).copy();d['harm']=(d.low_rating.eq(1)|d.late_flag.eq(1)).astype(int)
         a=d.groupby('seller_id').agg(harm=('harm','sum'),orders=('order_id','size')).reset_index();a=a[a.orders.ge(min_n)]
@@ -550,7 +551,7 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         share=100*a.head(k).harm.sum()/max(a.harm.sum(),1)
         return result(f'The top 10% of eligible sellers with observed harm ({k if len(a) else 0}) account for {pct(share)} of seller–order harm involvements.',
           [('Concentration of observed harm',pareto(a,'seller_id','harm'))],a,
-          'Harm is late OR low-rated, once per seller–order. Only sellers meeting the order minimum and with at least one harmed order enter this ranking. Unknown outcomes are not counted as observed harm.')
+          'Here, harm means late delivery or a rating at or below your chosen star limit. An order with both problems counts once per seller, but an order with two sellers can count for both. Only sellers with enough orders and at least one known problem enter the ranking. Missing results are not counted as known problems.')
     if n==26:
         d=f.drop_duplicates(['order_id','category','customer_state']);a=d.groupby(['category','customer_state']).size().rename('orders').reset_index()
         nat=a.groupby('category').orders.sum()/a.orders.sum();state=a.groupby('customer_state').orders.sum()
@@ -559,7 +560,7 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         a=a[a.orders.ge(min_n)]
         return result('An index below 1 means a category has a smaller share of observed category-order demand in that state than in the selected marketplace.',
           [('Category penetration index · 1 = selected-market mix',heat(a,'category','customer_state','demand_index',min_n,center=1))],a.sort_values('demand_index'),
-          'Multi-category orders count once in each category. The national benchmark is the current filtered selection, including state filters. Low penetration alone does not prove unmet demand or a growth opportunity.')
+          'An order with two product categories counts once in each category. The score compares a category’s share of orders in one state with its share in your whole selection, including any state filters. A score of 0.5 means half that share; 1 means the same share. A low score does not prove people want products they cannot buy.')
     if n==29:
         d=o.dropna(subset=['review_score']).copy()
         d['voice']=np.where(d.has_written_comment.astype('boolean').fillna(False),'Written comment','Stars only')
@@ -567,7 +568,7 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         fig=px.bar(a,x='review_score',y='share',color='voice',labels={'share':'Reviewed orders (%)','review_score':'Star rating'},hover_data=['orders'])
         return result(f'{pct(100*d.has_written_comment.mean())} of selected reviewed orders include a written title or message.',
           [('Which ratings come with written feedback?',style(fig))],a,
-          'This measures presence of text, not public visibility or NLP sentiment. The dataset does not establish whether comments were published.')
+          'Only orders with a star rating are included. A written comment means the saved review has a title or message. We do not check whether the words are positive or negative, and the records do not tell us whether the comment was published.')
     if n in [31,33]:return ramp(o,f,m,min_n,top_n)
     if n==32:
         a=metrics(f,'seller_id').sort_values('value',ascending=False);a['value_share']=100*a.value/max(a.value.sum(),1)
@@ -575,7 +576,7 @@ def detail_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         fig=go.Figure(go.Bar(x=['Selected baseline','Arithmetic exposure'],y=[a.value.sum(),loss],marker_color=[TEAL,RED]))
         return result(f'A {scenario}% reduction in the top {top_n} sellers’ selected value would expose {money(loss)}, assuming no replacement sales.',
           [('Seller concentration',pareto(a,'seller_id','value')),('User-controlled exposure scenario',style(fig))],a,
-          'This is an arithmetic sensitivity scenario, not a forecast. It assumes seller value falls by the chosen percentage with no customer substitution or replacement supply.')
+          'This is a what-if calculation. It reduces the selected top sellers’ item and shipping value by your chosen percentage. For example, a 50% setting removes half their value. It assumes buyers do not switch to other sellers and no seller replaces those sales. It is not a prediction.')
     raise ValueError(f'Unmapped detailed question: {n}')
 
 
@@ -602,4 +603,4 @@ def ramp(o,f,m,min_n=30,top_n=10):
     return result(f'{int(a.reached.sum()):,} of {len(a):,} selected sellers reach {top_n} delivered orders during the selection.',
         [('Seller ramp · cohorts with 90 days observed',style(fig)),
          ('Time to volume · sellers that reached the threshold',style(px.box(a[a.reached],x='source_group',y='days_to_threshold',points=False)))],a.reset_index(drop=True),
-        'First selected observed sale is not the true acquisition date. Unmatched sellers are not known to be organic. Threshold chart excludes sellers not yet at the threshold (survivorship bias); the table retains them. All order filters apply. Curves include only sellers with 90 days of follow-up.')
+        'Time starts at each seller’s first delivered purchase found within your filters, which may be later than their first real sale. Sellers not linked to marketing records have an unknown source. The time-to-target chart only includes sellers who reached your chosen order target; the table also lists those who did not. The lines only include sellers with 90 days of records afterward. All order filters apply.')
