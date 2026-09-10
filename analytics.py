@@ -240,7 +240,7 @@ REGION_MAP={'AC':'Norte','AM':'Norte','AP':'Norte','PA':'Norte','RO':'Norte','RR
     'MS':'Centro-Oeste','MT':'Centro-Oeste','ES':'Sudeste','MG':'Sudeste','RJ':'Sudeste','SP':'Sudeste',
     'PR':'Sul','RS':'Sul','SC':'Sul'}
 
-
+#All, check if it is rendering properly, I wrote the code, but there are some pixel limits during rendering, so plotly vs OSM
 def delivery_geo_map(o,f,region_filter=None):
     """Two-panel scatter map of Brazil: customers by delivery wait, sellers by volume."""
     delivered=o[o.order_status.eq('delivered')].dropna(subset=['delivery_time','customer_lat','customer_lon']).copy()

@@ -7,6 +7,8 @@ import pandas as pd
 from dash import Dash, html, dcc, dash_table, Input, Output, State, no_update, ctx
 from analytics import load, filter_data, overview, final_question, detail_question, ROOT
 
+#The initializing and bootstrapping script for Platoly Dash. 
+# It loads the data, sets up the layout and callbacks, and runs the server.
 ORDERS, ITEMS, MARKETING=load()
 QUESTIONS=json.loads((ROOT/'docs/questions.json').read_text(encoding='utf-8'))
 QUALITY=json.loads((ROOT/'data/processed/quality.json').read_text(encoding='utf-8'))
@@ -19,6 +21,7 @@ DESCRIPTIONS=['Retention and the value of a second purchase','How a broken promi
  'Does a shorter sales cycle translate into better outcomes?','Does order value change the experience?']
 START=str(ORDERS.order_purchase_timestamp.min().date());END=str(ORDERS.order_purchase_timestamp.max().date())
 LEAD_START=str(MARKETING.first_contact_date.min().date());LEAD_END=str(MARKETING.first_contact_date.max().date())
+#Plotly logo will show up, Abhinav can host it using gunicorn or other WSGI server, and it will be faster than the built-in Dash server. I have tested it on my PC, but it is slow due to low RAM and old CPU.
 app=Dash(__name__,title='Marketplace Observatory | DVD Team 6',update_title='Updating analysis…',suppress_callback_exceptions=True)
 server=app.server
 
@@ -34,7 +37,7 @@ def nav(label,value,small=''):
     return dcc.Link([html.Span(small,className='nav-number'),html.Span(label)],href='#'+value,refresh=False,className='nav-link',id='nav-'+value)
 
 
-# Main page layout with sidebar navigation and content area
+# Main page layout with sidebar navigation and content area, I have made the navbar collapsible, but the button is not on navbar, add comments here for your thoughts.
 app.layout=html.Div([
  dcc.Location(id='url',refresh=False),dcc.Store(id='table-store'),dcc.Store(id='active-nav'),dcc.Download(id='download-data'),
  html.A('Skip to analysis',href='#main-content',className='skip-link'),
@@ -79,7 +82,8 @@ app.layout=html.Div([
    html.Div(id='lab-controls',children=[field('Choose a detailed workbook question',dcc.Dropdown(id='detail-question',
        options=[{'label':f'{q["number"]:02d} · {q["question"]}','value':q['number']} for q in QUESTIONS['detailed']],value=1,clearable=False))],style={'display':'none'}),
    dcc.Loading(type='circle',color='#117B75',delay_show=200,children=html.Div(id='main-content')),
-   html.Footer('DVD TEAM 6 · MARKETPLACE OBSERVATORY')
+   #Added Everbody's name. Cheers guys.
+   html.Footer('DVD TEAM 6 · MARKETPLACE OBSERVATORY · Adarshom · Abhinav · Aditya · Vian · Deveshu')
  ],className='main')
 ],className='shell',id='shell')
 
@@ -92,7 +96,7 @@ def clean_table(d):
         if pd.api.types.is_numeric_dtype(d[col]):d[col]=d[col].round(3)
     return json.loads(d.to_json(orient='records',date_format='iso'))
 
-
+# Vian and Abhinav's methodology docs, Aditya and Deveshu's QA & data-quality metrics are combined. Abhinav can bug test this section
 def method_content():
     checks=QUALITY['checks'];issues=QUALITY['issues']
     md=(ROOT/'docs/METHODOLOGY.md').read_text(encoding='utf-8') if (ROOT/'docs/METHODOLOGY.md').exists() else 'Methodology is being prepared.'
@@ -105,14 +109,14 @@ def method_content():
     ])
 
 
-# All filter inputs that trigger a page re-render
+# All filter inputs that trigger a page re-render (Aditya and Deveshu can add more inputs here if needed)
 INPUTS=[Input('url','hash'),Input('dates','start_date'),Input('dates','end_date'),Input('categories','value'),Input('states','value'),
  Input('seller-states','value'),Input('sellers','value'),Input('statuses','value'),Input('payments','value'),Input('delivery','value'),
  Input('values','value'),Input('threshold','value'),Input('min-n','value'),Input('top-n','value'),Input('scenario','value'),
  Input('lead-dates','start_date'),Input('lead-dates','end_date'),Input('origins','value'),Input('min-leads','value'),Input('detail-question','value')]
 
 
-# Central callback that rebuilds the page when any filter changes
+# Central callback that rebuilds the page when any filter changes 
 @app.callback(Output('page-title','children'),Output('page-subtitle','children'),Output('main-content','children'),
  Output('table-store','data'),Output('commerce-controls','style'),Output('marketing-controls','style'),Output('lab-controls','style'),*INPUTS)
 def render_page(hash_value,start,end,categories,states,seller_states,sellers,statuses,payments,delivery,values,threshold,min_n,top_n,scenario,
@@ -127,8 +131,10 @@ def render_page(hash_value,start,end,categories,states,seller_states,sellers,sta
     if lead_end:m=m[m.first_contact_date.lt(pd.Timestamp(lead_end)+pd.Timedelta(days=1))]
     if origins:m=m[m.origin.isin(origins)]
     marketing=n in [7,8,9]
+
     # Category-state supply considers other buyer destinations under the remaining filters.
     _,supply=filter_data(ORDERS,ITEMS,start,end,categories,None,seller_states,sellers,statuses,payments,delivery,values,threshold) if (n==3 or (page=='lab' and detail==18)) and states else (o,f)
+
     if n:
         title=TITLES[n-1];subtitle=DESCRIPTIONS[n-1];question=QUESTIONS['final'][n-1]['question']
         r=final_question(n,o,f,m,max(1,int(min_leads or 30)) if marketing else min_n,scenario or 0,top_n,supply_frame=supply)
@@ -194,6 +200,6 @@ app.clientside_callback("""function(hash) {
  return window.dash_clientside.no_update;
 }""",Output('active-nav','data'),Input('url','hash'))
 
-
+#I have set it to debug=False, weird performance issue when set to true, but maybe it is due to low RAM and old CPU on my PC.
 if __name__=='__main__':
     app.run(debug=False,host=os.getenv('HOST','127.0.0.1'),port=int(os.getenv('PORT','8050')))

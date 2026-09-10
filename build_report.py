@@ -5,7 +5,8 @@ import pandas as pd
 from analytics import load,filter_data,final_question,overview,ROOT,money,pct
 
 
-# Generate all evidence files, technical report, and presentation outline
+# Generate all evidence files, technical report, and presentation outline.
+#Markdown files are used because they are human-readable, version-controllable, and can be converted to PDF or slides with pandoc or similar tools.
 def build():
     o,i,m=load();o,f=filter_data(o,i,statuses=['delivered'])
     questions=json.loads((ROOT/'docs/questions.json').read_text(encoding='utf-8'))
@@ -15,7 +16,7 @@ def build():
         r=final_question(n,o,f,m)
         r['table'].to_csv(evidence/f'Q{n:02d}.csv',index=False)
         results.append(r)
-    # Map every workbook question to its dashboard view
+    # Map every workbook question to its dashboard view. There are two - final 10 main questions and then additional 33 questions.
     coverage=[]
     for kind in ['final','detailed']:
         for q in questions[kind]:
@@ -84,5 +85,5 @@ Use the live app to export the selected chart PNGs and evidence CSVs. Exact clai
     (docs/'PRESENTATION_OUTLINE.md').write_text(outline,encoding='utf-8')
     print('Wrote technical report, 43-question coverage map, ten evidence CSVs and presentation outline.')
 
-
+#Standard Flashk app entry point
 if __name__=='__main__':build()
