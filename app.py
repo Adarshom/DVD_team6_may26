@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from dash import Dash, html, dcc, dash_table, Input, Output, State, no_update, ctx
-from analytics import load, filter_data, overview, final_question, detail_question, money, pct, number, ROOT
+from analytics import load, filter_data, overview, final_question, detail_question, ROOT
 
 ORDERS, ITEMS, MARKETING=load()
 QUESTIONS=json.loads((ROOT/'docs/questions.json').read_text(encoding='utf-8'))
@@ -45,8 +45,10 @@ app.layout=html.Div([
    *[nav(t,f'q{k+1}',f'{k+1:02d}') for k,t in enumerate(TITLES)],
    html.Div('EXPLORE THE EVIDENCE',className='nav-heading'),
    nav('Detailed question lab','lab','↗'),nav('Data and methodology','methods','≡'),
- ],className='sidebar'),
+ ],className='sidebar',id='sidebar'),
  html.Main([
+   html.Button('☰ Hide navigation',id='sidebar-toggle',n_clicks=0,className='button secondary sidebar-toggle',
+               **{'aria-controls':'sidebar','aria-expanded':'true'}),
    html.Header([html.H1(id='page-title'),html.P(id='page-subtitle',className='subtitle')],className='page-header'),
    html.Div(id='commerce-controls',children=[
      html.Div([
@@ -79,11 +81,7 @@ app.layout=html.Div([
    dcc.Loading(type='circle',color='#117B75',delay_show=200,children=html.Div(id='main-content')),
    html.Footer('DVD TEAM 6 · MARKETPLACE OBSERVATORY')
  ],className='main')
-],className='shell')
-
-
-def kpi(label,value,context,tone=''):
-    return html.Div([html.Span(label,className='kpi-label'),html.Strong(value,className='kpi-value '+tone),html.Small(context)],className='kpi')
+],className='shell',id='shell')
 
 
 def clean_table(d):
@@ -100,8 +98,6 @@ def method_content():
     md=(ROOT/'docs/METHODOLOGY.md').read_text(encoding='utf-8') if (ROOT/'docs/METHODOLOGY.md').exists() else 'Methodology is being prepared.'
     rows=[{'check':k.replace('_',' ').title(),'result':'Passed' if v else 'FAILED'} for k,v in checks.items()]
     return html.Div([
-      html.Div([kpi('Source tables','11','9 commerce + 2 marketing'),kpi('Orders',number(len(ORDERS)),'One row per order'),
-       kpi('Items',number(len(ITEMS)),'One row per order item'),kpi('Workbook coverage','10 + 33','Final + populated detailed questions')],className='kpi-grid'),
       html.Div([html.H2('How to read this dashboard'),dcc.Markdown(md)],className='method-card'),
       html.Div([html.H2('Data reconciliation'),dash_table.DataTable(data=rows,columns=[{'name':x.title(),'id':x} for x in ['check','result']],
           style_cell={'textAlign':'left','padding':'12px','fontFamily':'Arial'},style_header={'fontWeight':'bold','backgroundColor':'#EFF4EF'})],className='method-card'),
@@ -144,14 +140,8 @@ def render_page(hash_value,start,end,categories,states,seller_states,sellers,sta
         title='Grow without breaking the experience.';subtitle='An integrated view of marketplace value, delivery and customer satisfaction.'
         question='Where should marketplace leadership invest, protect and intervene?';r=overview(o,f,min_n)
     if marketing:
-        cards=[kpi('Qualified leads',number(len(m)),'Filtered by first contact'),kpi('Closed sellers',number(m.converted.sum()),pct(100*m.converted.mean())+' observed conversion'),
-              kpi('Matched sellers',number(m.matched_seller.sum()),'Linked to e-commerce items'),kpi('Mature matched cohort',number((m.mature_90d&m.matched_seller).sum()),'90 days observable after win')]
         scope=f'{lead_start} to {lead_end} · {len(m):,} leads · {m.origin.nunique()} sources · historical observed outcomes'
     else:
-        cards=[kpi('Gross order value',money(f.item_value.sum()),'Selected items + freight'),kpi('Orders',number(len(o)),f'{o.review_score.count():,} reviewed'),
-         kpi('Average review',f'{o.review_score.mean():.2f} / 5' if o.review_score.count() else 'N/A','Latest answered review per order'),
-         kpi('Late deliveries',pct(100*o.late_flag.mean()),f'{o.late_flag.count():,} eligible deliveries','risk'),
-         kpi('Low ratings',pct(100*o.low_rating.mean()),f'≤ {threshold} stars / reviewed orders','risk')]
         scope=f'{start} to {end} · {len(o):,} unique orders · {f.seller_id.nunique():,} sellers · minimum {min_n} observations per segment where applicable'
     rows=clean_table(r['table']);cols=[{'name':c.replace('_',' ').title(),'id':c} for c in r['table'].columns]
     table=html.Details([html.Summary(f'Inspect the evidence · {len(rows):,} rows'),
@@ -161,14 +151,14 @@ def render_page(hash_value,start,end,categories,states,seller_states,sellers,sta
            style_header={'fontWeight':'bold','backgroundColor':'#EFF4EF','color':'#223A39'},style_data_conditional=[{'if':{'row_index':'odd'},'backgroundColor':'#FAFBF8'}])
        ],className='evidence') if rows else html.Div()
     content=html.Div([
-        html.Div(scope,className='scope-line'),html.Div(cards,className='kpi-grid'),
+        html.Div(scope,className='scope-line'),
         html.Section([
             html.Div([html.H2('The question',className='eyebrow'),html.P(question)],className='summary-question'),
             html.Div([html.H2('What the selection shows',className='eyebrow'),html.P(r['insight'])],className='summary-insight'),
             html.Div([html.H2('Decision to consider',className='eyebrow'),html.P(r['action'] or 'Use these results to choose what to check next. Compare similar products, sellers or delivery routes before making changes.')],className='summary-action'),
             html.Div([html.H2('Interpretation and scope',className='eyebrow'),html.P(r['note'] or 'No orders or leads match these filters. Choose a wider date range or remove a filter to see results.')],className='summary-scope'),
         ],className='analysis-summary',**{'aria-label':'Question, findings, decision and scope'}),
-        html.Div([html.Section([html.H3(name),dcc.Graph(figure=fig,id={'type':'chart','index':f"{page}_{idx}"},config={'displaylogo':False,'responsive':True,
+        html.Div([html.Section([html.H3(name),dcc.Graph(figure=fig,responsive=True,id={'type':'chart','index':f"{page}_{idx}"},config={'displaylogo':False,'responsive':True,
           'toImageButtonOptions':{'format':'png','scale':2,'filename':'marketplace_chart'}})],
           className='chart-card chart-card-wide' if any(getattr(t,'type','')=='scattergeo' for t in fig.data) else 'chart-card') for idx,(name,fig) in enumerate(r['charts'])],className='chart-grid'),
         table])
@@ -186,6 +176,16 @@ def export_data(clicks,rows):
  Output('seller-states','value'),Output('sellers','value'),Output('statuses','value'),Output('payments','value'),Output('delivery','value'),Output('values','value'),
  Output('threshold','value'),Output('min-n','value'),Output('top-n','value'),Output('scenario','value'),Input('reset','n_clicks'),prevent_initial_call=True)
 def reset_filters(n):return START,END,[],[],[],[],['delivered'],[],[],[],2,30,10,50
+
+
+app.clientside_callback("""function(clicks) {
+ const collapsed = (clicks || 0) % 2 === 1;
+ window.setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
+ return [collapsed ? 'shell sidebar-collapsed' : 'shell',
+         collapsed ? '☰ Show navigation' : '☰ Hide navigation',
+         collapsed ? 'false' : 'true'];
+}""",Output('shell','className'),Output('sidebar-toggle','children'),
+ Output('sidebar-toggle','aria-expanded'),Input('sidebar-toggle','n_clicks'))
 
 
 app.clientside_callback("""function(hash) {

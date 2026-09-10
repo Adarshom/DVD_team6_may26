@@ -2,6 +2,7 @@
 from pathlib import Path
 import json
 import math
+import textwrap
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -12,6 +13,7 @@ ROOT=Path(__file__).resolve().parent
 TEAL='#117B75'; RED='#C85646'; GOLD='#BC861F'; INK='#223A39'; BLUE='#6185AA'
 PALETTE=[TEAL,RED,GOLD,BLUE,'#9387AE','#7F9B7C']
 COLORS={'Early':TEAL,'On time':BLUE,'Late':RED,'Unobserved':'#9DA7A3',
+        'No observed local supply':'#D62728','Observed local supply':'#1F77B4',
         'Fix':RED,'Protect':TEAL,'Explore growth':BLUE,'Investigate':GOLD,
         'One-time buyer':BLUE,'Repeat buyer':TEAL,'1':RED,'2':'#D99C65','3':GOLD,'4':'#77A49B','5':TEAL}
 px.defaults.color_discrete_sequence=PALETTE
@@ -27,7 +29,21 @@ LABELS={'value':'Gross order value (R$)','rating':'Average review / 5','low_rate
  'product_weight_g':'Product weight (g)','product_volume_cm3':'Product volume (cm³)',
  'product_photos_qty':'Photo count','product_description_lenght':'Description length',
  'payment_installments':'Maximum installments / order','has_written_comment':'Written review',
- 'one_star':'One-star orders','low_count':'Low-rated orders','late_count':'Late orders'}
+ 'one_star':'One-star orders','low_count':'Low-rated orders','late_count':'Late orders',
+ 'repeat_rate':'Returned within 90 days (%)','delivery_status':'First delivery outcome',
+ 'local_sellers':'Local sellers'}
+
+COMPACT_LABELS={'No observed local supply':'No local supply','Observed local supply':'Local supply',
+ 'Source unknown / unmatched':'Unknown source','Matched marketing seller':'Marketing seller',
+ 'Seller order involvements':'Seller orders','Gross order value (R$)':'Order value (R$)',
+ 'Low-rating share (%)':'Low ratings (%)','Late deliveries (%)':'Late orders (%)',
+ 'Orders / (local sellers + 1)':'Orders per<br>(local sellers + 1)'}
+
+
+def compact_label(value):
+    text=COMPACT_LABELS.get(value,value).replace('_',' ')
+    return '<br>'.join(textwrap.fill(line,width=20,break_long_words=False,break_on_hyphens=False).replace('\n','<br>')
+                      for line in text.split('<br>'))
 
 
 # Load prepared parquet tables, rebuilding from CSVs if needed
@@ -91,10 +107,14 @@ def number(v): return 'N/A' if pd.isna(v) else f'{v:,.0f}'
 
 # Apply consistent visual styling to every chart
 def style(fig):
+    for trace in fig.data:
+        if trace.name:trace.name=compact_label(trace.name)
+    color_title=fig.layout.coloraxis.colorbar.title.text
     fig.update_layout(template='plotly_white',paper_bgcolor='white',plot_bgcolor='white',
-      font=dict(family='Arial, sans-serif',size=12,color=INK),margin=dict(l=24,r=24,t=36,b=55),
-      legend=dict(orientation='h',y=1.12,x=0,title_text=''),height=365,
-      coloraxis_colorbar=dict(thickness=10,len=.75),hoverlabel=dict(bgcolor='white'),
+      font=dict(family='Arial, sans-serif',size=12,color=INK),margin=dict(l=24,r=24,t=55,b=55),
+      legend=dict(orientation='h',y=1.02,yanchor='bottom',x=0,title_text='',font=dict(size=10)),height=365,
+      coloraxis_colorbar=dict(thickness=10,len=.75,tickfont=dict(size=10),
+          title=dict(text=compact_label(color_title) if color_title else '',side='top',font=dict(size=10))),hoverlabel=dict(bgcolor='white'),
       modebar_remove=['lasso2d','select2d'])
     fig.update_xaxes(gridcolor='#EEF1EE',zeroline=False,automargin=True)
     fig.update_yaxes(gridcolor='#EEF1EE',zeroline=False,automargin=True)
@@ -113,7 +133,8 @@ def scatter(d,x,y,size=None,color=None,hover=None,quadrant=False):
     if size:d[size]=d[size].fillna(0).clip(lower=0)
     scale=['#F3E7D9',RED] if color in ['late_rate','low_rate','late_change_pp'] else ['#BCE0D2',TEAL]
     fig=px.scatter(d,x=x,y=y,size=size,color=color,hover_name=hover,size_max=42,opacity=.78,
-        labels=LABELS,color_discrete_map=COLORS,color_continuous_scale=scale,hover_data={x:':,.2f',y:':,.2f'})
+        labels=LABELS,color_discrete_map=COLORS,color_continuous_scale=scale,hover_data={x:':,.2f',y:':,.2f'},
+        category_orders={'no_local_supply':['Observed local supply','No observed local supply']})
     if quadrant:
         fig.add_vline(x=d[x].median(),line_dash='dot',line_color='#B7C7C0')
         fig.add_hline(y=d[y].median(),line_dash='dot',line_color='#B7C7C0')
@@ -244,7 +265,7 @@ def delivery_geo_map(o,f,region_filter=None):
     if cust.empty and sellers.empty:
         return empty('No geolocated deliveries in this selection.')
     fig=make_subplots(rows=1,cols=2,specs=[[{'type':'scattergeo'},{'type':'scattergeo'}]],
-        subplot_titles=['Where customers are, coloured by how long they wait','Where sellers are'],
+        subplot_titles=['Customer delivery time','Seller locations'],
         horizontal_spacing=0.02)
     # Left panel: customer locations colored by median delivery days
     fig.add_trace(go.Scattergeo(
@@ -253,13 +274,13 @@ def delivery_geo_map(o,f,region_filter=None):
             colorscale=[[0,'#2a9d2a'],[0.35,'#8cc63f'],[0.55,'#f0d048'],[0.75,'#e8832a'],[1.0,'#c83232']],
             cmin=cust.median_delivery_days.quantile(0.05) if len(cust) else 5,
             cmax=cust.median_delivery_days.quantile(0.95) if len(cust) else 25,
-            colorbar=dict(title=dict(text='Median delivery days',side='right'),x=0.45,len=0.7,thickness=12,
+            colorbar=dict(title=dict(text='Median delivery<br>(days)',side='top',font=dict(size=10)),x=0.45,len=0.7,thickness=10,
                 tickfont=dict(size=10)),
             line=dict(width=0)),
         text=(cust.city+', '+cust.state).tolist(),
         customdata=np.column_stack([cust.state,cust.region,cust.median_delivery_days.round(1),cust.orders]).tolist(),
         hovertemplate='<b>%{text}</b><br>Region: %{customdata[1]}<br>Median delivery: %{customdata[2]} days<br>Orders: %{customdata[3]}<extra>Customer</extra>',
-        name='Customer locations',showlegend=True,
+        name='Customers',showlegend=True,
         legendgroup='customers'),row=1,col=1)
     # Right panel: seller locations sized by order volume
     size_ref=max(sellers.total_orders_volume.max()/35,1) if len(sellers) else 1
@@ -270,7 +291,7 @@ def delivery_geo_map(o,f,region_filter=None):
         text=(sellers.city+', '+sellers.state).tolist(),
         customdata=np.column_stack([sellers.state,sellers.region,sellers.total_orders_volume]).tolist(),
         hovertemplate='<b>%{text}</b><br>Region: %{customdata[1]}<br>Total orders: %{customdata[2]}<extra>Seller</extra>',
-        name='Seller locations, sized by volume',showlegend=True,
+        name='Sellers · order volume',showlegend=True,
         legendgroup='sellers'),row=1,col=2)
     # Shared geo settings for both panels
     geo_common=dict(scope='south america',showland=True,landcolor='#f5f4f0',
@@ -294,10 +315,7 @@ def delivery_geo_map(o,f,region_filter=None):
         font=dict(size=11,color=INK))
     # Main title and subtitle
     fig.update_layout(
-        title=dict(text='The delivery problem is a map problem: supply sits in one corner of a continent<br>'
-            '<span style="font-size:11px;color:#647A77">Sixty percent of sellers are in Sao Paulo state while demand '
-            'is spread across the country. Seven in ten items bought in the North East are shipped from Sao Paulo, '
-            'which is why those customers wait seventeen days instead of seven.</span>',
+        title=dict(text='Delivery time and seller locations',
             x=0.01,y=0.98,font=dict(size=15,color=INK)),
         height=560,paper_bgcolor='white',plot_bgcolor='white',
         font=dict(family='Arial, sans-serif',size=12,color=INK),
@@ -306,7 +324,7 @@ def delivery_geo_map(o,f,region_filter=None):
         modebar_remove=['lasso2d','select2d'],
         # Source footnote
         annotations=list(fig.layout.annotations)+[dict(
-            text=f'Source: {len(delivered):,} delivered order items from {sellers.seller_id.nunique():,} active sellers across {delivered.customer_state.nunique()} states.',
+            text=f'{len(delivered):,} delivered orders · {sellers.seller_id.nunique():,} sellers · {delivered.customer_state.nunique()} states',
             x=0.01,y=-0.06,xref='paper',yref='paper',showarrow=False,
             font=dict(size=10,color='#8A9A97'))])
     return fig
@@ -358,13 +376,14 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         r=r[r.n.ge(min_n)];r['repeat_rate']=pd.to_numeric(r.repeat_rate)*100
         return result(f'Repeat buyers account for {pct(share)} of selected gross value. These are customers with 2+ delivered orders in the full observed history.',
           [('Who contributes value?',style(fig)),('Experience comparison · row-normalized colours',style(fig2)),
-           ('First delivery experience and observed 90-day return',bar(r,'delivery_status','repeat_rate',horizontal=False))],a,
+           ('Observed 90-day return to marketplace',bar(r,'delivery_status','repeat_rate',horizontal=False))],a,
           'A repeat buyer has at least two delivered orders in the full saved history. Their first order also counts toward repeat-buyer value; the table’s is_repeat field marks only later orders. In the colour chart, point to a cell to see its value. Late deliveries and shipping as a share of item price are shown as percentages. The return chart only uses first purchases with 90 days of records afterward. It cannot tell us why a buyer came back.',
           'Protect first-order delivery reliability; validate retention interventions with a controlled experiment.')
     if n==2:
         eligible=o[o.late_flag.notna()]
         bins=[-np.inf,-15,-7,-1,0,3,7,14,30,np.inf]
         line,a=binned(eligible,'delay_days',bins=bins,min_n=min_n)
+        delivery_chart,_=binned(o[o.order_status.eq('delivered')&o.delivery_time.ge(0)],'delivery_time',min_n=min_n)
         d=f[f.late_flag.notna()].copy();d['delay_bucket']=pd.cut(d.delay_days,bins).astype('string')
         h=metrics(d,['category','delay_bucket'])
         a=a.sort_values('x') if not a.empty else a
@@ -373,9 +392,10 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
             insight=f'The largest adjacent-bin rating drop is {abs(b.change):.2f} stars on entering {b.bucket} days relative to the promise.' if b.change<0 else 'No adjacent eligible delay bins show a decrease in average rating in this selection.'
         else:insight='Too few eligible delay bins to identify a descriptive tipping point.'
         return result(insight,[('Satisfaction as the promise is missed · 95% mean CI',line),
+           ('Delivery time versus rating · 95% mean CI',delivery_chart),
            ('Does the pattern differ by category?',heat(h,'category','delay_bucket','rating',min_n,'reviews')),
            ('Does the pattern differ by customer state?',heat(metrics(d,['customer_state','delay_bucket']),'customer_state','delay_bucket','rating',min_n,'reviews'))],a,
-           'Days are counted by calendar date: 0 means delivery on the promised date, and 3 means three days late. The chart groups orders by how early or late they arrived. The biggest rating drop can change when the groups, products or number of reviews change. It does not prove that one exact day causes bad reviews. The colour charts show up to 18 rows with the most orders.',
+           'Days relative to the promise are counted by calendar date: 0 means on time, and 3 means three days late. The delivery-time chart groups reviewed, delivered orders into up to eight duration bands, showing median days from purchase to delivery against average rating, with 95% mean confidence intervals. Bands below the minimum sample are omitted. The biggest rating drop can change with the groups, products or reviews selected; it does not establish causation. The colour charts show up to 18 rows with the most orders.',
            'Escalate delivery exceptions before the promise is missed, then test category-specific alert thresholds.')
     if n==3:
         a=metrics(f,['category','customer_state'])
@@ -433,8 +453,7 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         h['Exposure']=h.value*h.top_seller_share/100
         return result(f'The top 10% of sellers ({k:,} of {len(a):,}) account for {pct(share)} of selected value. {int(h.dependent.sum())} eligible categories exceed HHI 2,500.',
           [('How concentrated is seller value?',pareto(a,'seller_id','value')),
-           ('Category seller concentration · HHI',bar(h,'category','HHI')),
-           ('Category concentration heatmap',heat(h.assign(metric='HHI'),'category','metric','HHI'))],h.sort_values('HHI',ascending=False),
+           ('Category seller concentration · HHI',bar(h,'category','HHI'))],h.sort_values('HHI',ascending=False),
            'Each seller gets only the value of their own items and shipping, even when an order has several sellers. HHI is a score for how much sales depend on a few sellers: a higher score means more dependence, and 10,000 means one seller has all the value. This study flags scores above 2,500 as a reason to check backup sellers. That is a study rule, not a legal judgment.',
            'Develop backup supply in concentrated categories; account for replacement demand before interpreting exposure as lost revenue.')
     if n in [7,8,9]:return marketing_question(n,m,min_n)
@@ -449,8 +468,7 @@ def final_question(n,o,f,m,min_n=30,scenario=50,top_n=10,**kwargs):
         if o.loc[o.order_value.ge(600),'review_score'].count()>=min_n and o.loc[o.order_value.lt(150),'review_score'].count()>=min_n:
             ins=f'R$600+ orders average {o.loc[o.order_value.ge(600),"review_score"].mean():.2f}/5, versus {o.loc[o.order_value.lt(150),"review_score"].mean():.2f}/5 below R$150.'
         return result(ins,[('Delivery distributions by full order value',style(fig)),
-            ('Experience gaps across categories',heat(h,'category','value_band','rating',min_n,'reviews')),
-            ('Installments and order value',box_summary(o,'payment_installments','order_value'))],a,
+            ('Experience gaps across categories',heat(h,'category','value_band','rating',min_n,'reviews'))],a,
             'Price groups use the full order total, even when you choose just one product category. Value totals elsewhere count only the selected items and their shipping. Each order has one review score and one delivery record. We do not have payment fees or the cost of the goods, so we cannot say whether paying in several parts earns more profit.',
             'Check high-value service gaps within categories before designing a premium-order service policy.')
 
