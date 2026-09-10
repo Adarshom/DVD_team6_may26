@@ -4,7 +4,7 @@ import math
 import unittest
 import numpy as np
 import pandas as pd
-from analytics import load,filter_data,metrics,final_question,detail_question,overview,ROOT
+from analytics import load,filter_data,metrics,final_question,overview,ROOT
 from prepare_data import haversine
 
 
@@ -84,11 +84,6 @@ class MarketplaceTests(unittest.TestCase):
                 r=final_question(n,self.o,self.f,self.marketing)
                 self.assertTrue(r['insight'])
                 for _,fig in r['charts']:json.loads(fig.to_json())
-        for n in range(1,34):
-            with self.subTest(detailed=n):
-                r=detail_question(n,self.o,self.f,self.marketing)
-                for _,fig in r['charts']:json.loads(fig.to_json())
-
     def test_empty_and_sparse_states(self):
         for kwargs in [dict(categories=['Missing category']),dict(categories=['Security And Services'],statuses=['delivered']),dict(statuses=['canceled'])]:
             o,f=filter_data(self.orders,self.items,**kwargs)
@@ -98,30 +93,33 @@ class MarketplaceTests(unittest.TestCase):
         for n in [7,8,9]:
             self.assertIn('No leads',final_question(n,self.o,self.f,empty)['insight'])
 
-    def test_http_callback_download_and_reset(self):
-        from app import app,START,END,LEAD_START,LEAD_END,INPUTS,export_data,reset_filters
+    def test_http_callback_and_reset(self):
+        from app import app,START,END,LEAD_START,LEAD_END,INPUTS,reset_filters
         c=app.server.test_client()
         for path in ['/','/_dash-layout','/_dash-dependencies']:
             self.assertEqual(c.get(path).status_code,200)
         key=next(k for k in app.callback_map if k.startswith('..page-title'))
         outs=[{'id':x.component_id,'property':x.component_property} for x in app.callback_map[key]['output']]
-        vals=['#q5',START,END,['Health Beauty'],['SP'],None,None,['delivered'],None,None,None,2,30,10,50,LEAD_START,LEAD_END,None,30,1]
+        vals=['#q5',START,END,['Health Beauty'],['SP'],None,None,['delivered'],None,None,None,2,30,LEAD_START,LEAD_END,None,30]
         inputs=[{'id':x.component_id,'property':x.component_property,'value':v} for x,v in zip(INPUTS,vals)]
         response=c.post('/_dash-update-component',json={'output':key,'outputs':outs,'inputs':inputs,'state':[],'changedPropIds':['url.hash']})
         self.assertEqual(response.status_code,200)
-        data=response.get_json()['response'];rows=data['table-store']['data']
-        self.assertEqual(rows[0]['category'],'Health Beauty')
-        export=export_data(1,rows)
-        self.assertIn('Health Beauty',export['content'])
-        self.assertEqual(export['filename'],'marketplace_evidence.csv')
+        data=response.get_json()['response']
+        self.assertEqual(data['page-title']['children'],'Category priorities')
+        self.assertIn('Health Beauty',json.dumps(data['main-content']))
+        self.assertEqual(data['commerce-controls']['style']['display'],'block')
         reset=reset_filters(1)
         self.assertEqual(reset[6],['delivered']);self.assertEqual(reset[0],START)
 
-    def test_methodology_uses_utf8(self):
-        from app import method_content
-        methodology=(ROOT/'docs/METHODOLOGY.md').read_bytes().decode('utf-8')
-        self.assertIn('How the tables join',methodology)
-        self.assertEqual(method_content().__class__.__name__,'Div')
+    def test_removed_pages_fall_back_to_overview(self):
+        from app import render_page,START,END,LEAD_START,LEAD_END
+        for page in ['#lab','#methods']:
+            with self.subTest(page=page):
+                rendered=render_page(page,START,END,None,None,None,None,['delivered'],
+                    None,None,None,2,30,LEAD_START,LEAD_END,None,30)
+                self.assertEqual(rendered[0],'Grow without breaking the experience.')
+                self.assertEqual(rendered[3],{'display':'block'})
+
 
 
 if __name__=='__main__':unittest.main()

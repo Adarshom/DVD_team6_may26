@@ -15,7 +15,6 @@ def haversine(lat1, lon1, lat2, lon2):
     h = np.sin((c-a)/2)**2 + np.cos(a)*np.cos(c)*np.sin((d-b)/2)**2
     return 6371.0088 * 2 * np.arcsin(np.sqrt(np.clip(h, 0, 1)))
 
-#Adarsh, please use spacing between lines ~ Deveshu
 def prepare(raw=ROOT/'data/raw', out=ROOT/'data/processed'):
     raw, out = Path(raw), Path(out)
     out.mkdir(parents=True, exist_ok=True)

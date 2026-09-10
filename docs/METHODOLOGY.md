@@ -41,13 +41,13 @@ Orders, items and marketing are stored separately. Charts aggregate value from i
 
 ### Filters and chart interpretation
 
-Purchase dates, category, customer state, seller state, seller ID, status, payment type, delivery outcome and full order value apply to commerce pages. Changing filters recomputes charts, KPI denominators, findings and evidence downloads. Clearing a multi-select means all values. Reset restores delivered orders and the full date range.
+Purchase dates, category, customer state, seller state, seller ID, status, payment type, delivery outcome and full order value apply to commerce pages. Changing filters recomputes charts, KPI denominators, findings. Clearing a multi-select means all values. Reset restores delivered orders and the full date range.
 
 The minimum sample applies to the segment's relevant count: reviews for satisfaction comparisons, observed deliveries for late-rate comparisons, and orders for demand or value. Marketing conversion uses a separate minimum lead count. Seller-quality source comparisons require five mature matched sellers; the acquisition CX scatter requires five reviews per seller. Some exact-total charts and distributions intentionally retain all observations. Tables expose counts for review.
 
-The demand/local-supply view counts active local sellers across all buyer destinations while retaining other selections. A state with no observed local seller may still receive nationwide deliveries. It is not proof of unserved demand. Most heatmaps display at most 18 high-volume rows for legibility; evidence tables retain all eligible rows.
+The demand/local-supply view counts active local sellers across all buyer destinations while retaining other selections. A state with no observed local seller may still receive nationwide deliveries. It is not proof of unserved demand. Most heatmaps display at most 18 high-volume rows for legibility.
 
-Chart toolbars support zoom, pan, reset and PNG export. Click legend entries to hide or isolate series. Use treemap branches for drilldown. Chart-point clicks do not change the global filters. Evidence tables support sorting, searching and a filtered-result CSV download. The download uses the global filter result, not additional search text typed into the table.
+Chart toolbars support zoom, pan and reset. Click legend entries to hide or isolate series. Use treemap branches for drilldown. Chart-point clicks do not change the global filters.
 
 ### Marketing and observation windows
 
@@ -57,7 +57,7 @@ Only 380 of the 842 closed sellers match e-commerce item sales. Absence from thi
 
 Seller comparisons use delivered purchases at or after `won_date` and before `won_date + 90 days`. A mature cohort must have 90 days before the latest observed delivered purchase, 29 August 2018. This is an observation-window proxy, not a guarantee that all seller activity is captured. Positive-only revenue declaration plots exclude 797 zero declarations, while retaining those source values. Only 69 closed sellers have a declared catalogue size.
 
-Repeat-purchase comparisons use first delivered purchases with at least 90 days of observed follow-up. Seller ramp plots use the first sale within the selection, not a known acquisition date; unreached volume thresholds remain visible in evidence tables.
+Repeat-purchase comparisons use first delivered purchases with at least 90 days of observed follow-up.
 
 ### What the data cannot establish
 
@@ -67,4 +67,4 @@ The delivery tipping point is the largest adjacent-bin decrease in average ratin
 
 ### Workbook coverage
 
-All **10 final questions** and all **33 populated detailed questions** are implemented. The detailed sheet is named “35 Questions in detail by ind c” but contains 33 question rows. The unrelated fourth sheet is not used as a requirements source. Older detailed-sheet notes saying marketing data is absent are superseded where the supplied funnel files can actually be linked. The original question text is retained in `docs/questions.json` and displayed in the app.
+All **10 final questions** are implemented. The detailed question lab has been removed from the app. The detailed sheet is named “35 Questions in detail by ind c” but contains 33 question rows. The unrelated fourth sheet is not used as a requirements source. Older detailed-sheet notes saying marketing data is absent are superseded where the supplied funnel files can actually be linked. The original question text is retained in `docs/questions.json` and displayed in the app.

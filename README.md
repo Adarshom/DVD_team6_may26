@@ -1,4 +1,4 @@
-# Marketplace Observatory
+# E-commerce Data Viz
 
 This is a Python Plotly Dash application for visualizing e-commerce orders, delivery data, and customer satisfaction. It is built from the supplied Excel workbook and CSV files. No external APIs or services are needed. Everything runs locally on the provided data.
 
@@ -33,7 +33,7 @@ Open http://127.0.0.1:8050 in your browser. Leave the terminal open while you us
 
 | File | Purpose |
 | :--- | :--- |
-| `app.py` | Dash layout, controls, callbacks and CSV download |
+| `app.py` | Dash layout, controls, callbacks |
 | `analytics.py` | Shared filters, metrics and every chart/question implementation |
 | `prepare_data.py` | Read raw CSVs, validate joins and produce prepared tables |
 | `build_report.py` | Regenerate findings, question coverage and default evidence tables |
@@ -41,8 +41,8 @@ Open http://127.0.0.1:8050 in your browser. Leave the terminal open while you us
 | `data/raw/` | All eleven original CSVs and the supplied workbook |
 | `data/processed/` | Order, item, marketing and acquired-sales Parquet tables; quality JSON |
 | `docs/TECHNICAL_REPORT.md` | Findings, recommendations, limitations and methodology |
-| `docs/METHODOLOGY.md` | Definitions shown inside the dashboard |
-| `docs/QUESTION_COVERAGE.csv` | Every supplied final and detailed question mapped to its view |
+| `docs/METHODOLOGY.md` | Offline reference for data definitions |
+| `docs/QUESTION_COVERAGE.csv` | The ten main questions mapped to their views |
 | `docs/questions.json` | Exact question wording extracted from the workbook |
 | `docs/evidence/` | Default-filter evidence for the ten final questions |
 | `docs/PRESENTATION_OUTLINE.md` | Suggested narrative for the course presentation |

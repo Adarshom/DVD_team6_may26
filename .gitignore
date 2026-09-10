@@ -21,3 +21,6 @@ tests\test_project.py
 tests
 test_geo.html
 q3_verify.png
+tests
+Architecture.md
+Dockerfile

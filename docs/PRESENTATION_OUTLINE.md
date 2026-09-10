@@ -8,6 +8,6 @@
 6. **Acquisition volume is not enough:** Show Q7 conversion and Q9 equal-age seller performance. Disclose the 380/842 match and 344 mature matched sellers, plus sparse declarations.
 7. **Actions and measurement:** Propose a delivery-exception trial, targeted category fixes, backup supply, and equal-age acquisition quality tracking. Close with value and catalogue breadth as guardrails.
 
-Demo path: Executive overview → Delivery tipping point → category and customer-state filters → Category priorities → Seller concentration → Lead conversion → Data and methodology.
+Demo path: Executive overview → Delivery tipping point → category and customer-state filters → Category priorities → Seller concentration → Lead conversion.
 
-Use the live app to export the selected chart PNGs and evidence CSVs. Exact claims and denominators are in TECHNICAL_REPORT.md. This file is a presentation outline, not a finished slide deck.
+Exact claims and denominators are in TECHNICAL_REPORT.md. This file is a presentation outline, not a finished slide deck.

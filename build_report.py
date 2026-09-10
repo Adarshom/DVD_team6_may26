@@ -16,19 +16,17 @@ def build():
         r=final_question(n,o,f,m)
         r['table'].to_csv(evidence/f'Q{n:02d}.csv',index=False)
         results.append(r)
-    # Map every workbook question to its dashboard view. There are two - final 10 main questions and then additional 33 questions.
+    # Map the ten supported questions to their dashboard views.
     coverage=[]
-    for kind in ['final','detailed']:
-        for q in questions[kind]:
-            coverage.append({'sheet':'FINAL 10 QUESTIONS' if kind=='final' else '35 Questions in detail by ind c',
-                'question_number':q['number'],'question':q['question'],
-                'app_view':f'#q{q["number"]}' if kind=='final' else f'#lab → detailed question {q["number"]}',
-                'code':f'analytics.py:{"final_question" if kind=="final" else "detail_question"}({q["number"]}, …)',
-                'workbook_chart_request':q['charts'],'implementation_status':'Implemented with explicit data-limit notes'})
+    for q in questions['final']:
+        coverage.append({'sheet':'FINAL 10 QUESTIONS',
+            'question_number':q['number'],'question':q['question'],
+            'app_view':f'#q{q["number"]}',
+            'code':f'analytics.py:final_question({q["number"]}, …)',
+            'workbook_chart_request':q['charts'],'implementation_status':'Implemented with explicit data-limit notes'})
     pd.DataFrame(coverage).to_csv(docs/'QUESTION_COVERAGE.csv',index=False)
     lines=['# Technical report',
       '## A Visual Study of E-Commerce Orders, Delivery & Customer Satisfaction',
-      '**DVD 2026 T2 · Group 6**',
       '## Decision and scope',
       'Grow the marketplace while protecting the customer experience. The dashboard identifies where observed transaction value and poor service overlap, where seller dependence creates exposure, and which acquisition outcomes can be verified from linked data.',
       'This report uses the default dashboard cohort: all delivered orders in the supplied historical extract, minimum 30 observations per segment where applicable, and low ratings defined as 1–2 stars. Marketing analyses use all supplied leads. No external data or synthetic observations are used.',
@@ -78,12 +76,12 @@ def build():
 6. **Acquisition volume is not enough:** Show Q7 conversion and Q9 equal-age seller performance. Disclose the 380/842 match and 344 mature matched sellers, plus sparse declarations.
 7. **Actions and measurement:** Propose a delivery-exception trial, targeted category fixes, backup supply, and equal-age acquisition quality tracking. Close with value and catalogue breadth as guardrails.
 
-Demo path: Executive overview → Delivery tipping point → category and customer-state filters → Category priorities → Seller concentration → Lead conversion → Data and methodology.
+Demo path: Executive overview → Delivery tipping point → category and customer-state filters → Category priorities → Seller concentration → Lead conversion.
 
-Use the live app to export the selected chart PNGs and evidence CSVs. Exact claims and denominators are in TECHNICAL_REPORT.md. This file is a presentation outline, not a finished slide deck.
+Exact claims and denominators are in TECHNICAL_REPORT.md. This file is a presentation outline, not a finished slide deck.
 '''
     (docs/'PRESENTATION_OUTLINE.md').write_text(outline,encoding='utf-8')
-    print('Wrote technical report, 43-question coverage map, ten evidence CSVs and presentation outline.')
+    print('Wrote technical report, 10-question coverage map, ten evidence CSVs and presentation outline.')
 
 #Standard Flashk app entry point
 if __name__=='__main__':build()
