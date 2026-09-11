@@ -59,7 +59,7 @@ def build():
        '- Box plots show distributions; large plots transmit exact summary quartiles rather than raw point arrays.',
        '- Funnel counts and Wilson intervals retain conversion denominators. Equal-age seller windows reduce exposure-time bias.',
        '## Reproducibility and validation',
-       'Run `python prepare_data.py`, `python build_report.py`, and `python -m unittest discover -s tests -v`. Source hashes and reconciliations are stored in `data/processed/quality.json`. See `docs/QA.md` for what was and was not verified.',
+       'Run `python prepare_data.py`, `python build_report.py`, and `python -m unittest discover -s tests -v`. Source hashes and reconciliations are stored in `data/processed/quality.json`.',
        'The Python framework was selected because pandas supports transparent relational preparation, Plotly supplies interactive statistical charts, and Dash connects those charts to Python callbacks without a separate JavaScript business-logic layer. Parquet reduces startup and disk costs. No hosted database, paid API, or API key is required.',
        'Framework reference: [Official Plotly Dash callback documentation](https://dash.plotly.com/basic-callbacks).',
        '## Remaining evidence gaps',
